@@ -9,8 +9,8 @@ import (
 func TestNewFrame(t *testing.T) {
 	tests := []struct {
 		name   string
-		width  uint
-		height uint
+		width  int
+		height int
 	}{
 		{
 			name:   "single cell",
@@ -26,7 +26,11 @@ func TestNewFrame(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			frame := NewFrame(tt.width, tt.height)
+			cells := make([]Cell, tt.width*tt.height)
+			frame, err := NewFrame(tt.width, tt.height, cells)
+			if err != nil {
+				t.Fatalf("NewFrame() error = %v", err)
+			}
 
 			if frame.width != tt.width {
 				t.Fatalf("width = %d, want %d", frame.width, tt.width)
@@ -34,8 +38,45 @@ func TestNewFrame(t *testing.T) {
 			if frame.height != tt.height {
 				t.Fatalf("height = %d, want %d", frame.height, tt.height)
 			}
-			if len(frame.cells) != int(tt.width*tt.height) {
+			if len(frame.cells) != tt.width*tt.height {
 				t.Fatalf("len(cells) = %d, want %d", len(frame.cells), tt.width*tt.height)
+			}
+		})
+	}
+}
+
+func TestNewFrameRejectsInvalidDimensions(t *testing.T) {
+	tests := []struct {
+		name   string
+		width  int
+		height int
+		cells  []Cell
+	}{
+		{
+			name:   "negative width",
+			width:  -1,
+			height: 1,
+			cells:  nil,
+		},
+		{
+			name:   "negative height",
+			width:  1,
+			height: -1,
+			cells:  nil,
+		},
+		{
+			name:   "cell count does not match dimensions",
+			width:  2,
+			height: 2,
+			cells:  make([]Cell, 3),
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			_, err := NewFrame(tt.width, tt.height, tt.cells)
+			if !errors.Is(err, ErrInvalidFrameDimensions) {
+				t.Fatalf("NewFrame() error = %v, want %v", err, ErrInvalidFrameDimensions)
 			}
 		})
 	}
@@ -59,9 +100,9 @@ func TestFrameCellAtReadsCellsByRowMajorIndex(t *testing.T) {
 
 	tests := []struct {
 		name    string
-		x       uint
-		y       uint
-		wantIdx uint
+		x       int
+		y       int
+		wantIdx int
 	}{
 		{
 			name:    "top left",
@@ -111,9 +152,19 @@ func TestFrameCellAtReadsCellsByRowMajorIndex(t *testing.T) {
 func TestFrameCellAtRejectsOutOfBoundsCoordinates(t *testing.T) {
 	tests := []struct {
 		name string
-		x    uint
-		y    uint
+		x    int
+		y    int
 	}{
+		{
+			name: "x below zero",
+			x:    -1,
+			y:    0,
+		},
+		{
+			name: "y below zero",
+			x:    0,
+			y:    -1,
+		},
 		{
 			name: "x equals width",
 			x:    3,
@@ -133,9 +184,12 @@ func TestFrameCellAtRejectsOutOfBoundsCoordinates(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			frame := NewFrame(3, 2)
+			frame, err := NewFrame(3, 2, make([]Cell, 6))
+			if err != nil {
+				t.Fatalf("NewFrame() error = %v", err)
+			}
 
-			_, err := frame.CellAt(tt.x, tt.y)
+			_, err = frame.CellAt(tt.x, tt.y)
 			if !errors.Is(err, ErrOutOfFrameBounds) {
 				t.Fatalf("CellAt() error = %v, want %v", err, ErrOutOfFrameBounds)
 			}
