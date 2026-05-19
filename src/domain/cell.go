@@ -1,5 +1,6 @@
 package domain
 
 type Cell struct {
-	color Color
+	fg, bg Color
+	symbol rune
 }
