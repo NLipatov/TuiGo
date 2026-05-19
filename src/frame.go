@@ -1,4 +1,4 @@
-package domain
+package tuigo
 
 import (
 	"errors"

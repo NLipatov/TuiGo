@@ -1,19 +1,16 @@
-package domain
+package ansi
 
-import (
-	"errors"
-	"tuigo/presentation/ansi"
-)
+import "errors"
 
 var (
 	ErrInvalidEscapeSequence = errors.New("Invalid Escape sequence")
 )
 
 type Color struct {
-	escapeSequence ansi.ANSIEscapeSequence
+	escapeSequence ANSIEscapeSequence
 }
 
-func (c *Color) New(escapeSequence ansi.ANSIEscapeSequence) (Color, error) {
+func NewColor(escapeSequence ANSIEscapeSequence) (Color, error) {
 	if !escapeSequence.IsColor() {
 		return Color{}, ErrInvalidEscapeSequence
 	}
@@ -22,6 +19,6 @@ func (c *Color) New(escapeSequence ansi.ANSIEscapeSequence) (Color, error) {
 	}, nil
 }
 
-func (c *Color) String() string {
+func (c Color) String() string {
 	return string(c.escapeSequence)
 }

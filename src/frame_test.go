@@ -1,9 +1,9 @@
-package domain
+package tuigo
 
 import (
 	"errors"
 	"testing"
-	"tuigo/presentation/ansi"
+	"tuigo/ansi"
 )
 
 func TestNewFrame(t *testing.T) {
@@ -43,18 +43,18 @@ func TestNewFrame(t *testing.T) {
 
 func TestFrameCellAtReadsCellsByRowMajorIndex(t *testing.T) {
 	cells := []Cell{
-		testCell(ansi.FG_BLACK),
-		testCell(ansi.FG_RED),
-		testCell(ansi.FG_GREEN),
-		testCell(ansi.FG_YELLOW),
-		testCell(ansi.FG_BLUE),
-		testCell(ansi.FG_PURPLE),
-		testCell(ansi.FG_CYAN),
-		testCell(ansi.FG_WHITE),
-		testCell(ansi.FG_BOLD_BLACK),
-		testCell(ansi.FG_BOLD_RED),
-		testCell(ansi.FG_BOLD_GREEN),
-		testCell(ansi.FG_BOLD_YELLOW),
+		testCell(t, ansi.FG_BLACK),
+		testCell(t, ansi.FG_RED),
+		testCell(t, ansi.FG_GREEN),
+		testCell(t, ansi.FG_YELLOW),
+		testCell(t, ansi.FG_BLUE),
+		testCell(t, ansi.FG_PURPLE),
+		testCell(t, ansi.FG_CYAN),
+		testCell(t, ansi.FG_WHITE),
+		testCell(t, ansi.FG_BOLD_BLACK),
+		testCell(t, ansi.FG_BOLD_RED),
+		testCell(t, ansi.FG_BOLD_GREEN),
+		testCell(t, ansi.FG_BOLD_YELLOW),
 	}
 
 	tests := []struct {
@@ -148,10 +148,10 @@ func TestFrameAccessDoesNotAllocate(t *testing.T) {
 		width:  2,
 		height: 2,
 		cells: []Cell{
-			testCell(ansi.FG_BLACK),
-			testCell(ansi.FG_RED),
-			testCell(ansi.FG_GREEN),
-			testCell(ansi.FG_BLUE),
+			testCell(t, ansi.FG_BLACK),
+			testCell(t, ansi.FG_RED),
+			testCell(t, ansi.FG_GREEN),
+			testCell(t, ansi.FG_BLUE),
 		},
 	}
 
@@ -167,10 +167,21 @@ func TestFrameAccessDoesNotAllocate(t *testing.T) {
 	}
 }
 
-func testCell(sequence ansi.ANSIEscapeSequence) Cell {
+func testCell(t *testing.T, sequence ansi.ANSIEscapeSequence) Cell {
+	t.Helper()
+
+	fg, err := ansi.NewColor(sequence)
+	if err != nil {
+		t.Fatalf("NewColor(%q) error = %v", sequence, err)
+	}
+	bg, err := ansi.NewColor(ansi.BG_BLACK)
+	if err != nil {
+		t.Fatalf("NewColor(%q) error = %v", ansi.BG_BLACK, err)
+	}
+
 	return NewCell(
 		'x',
-		Color{escapeSequence: sequence},
-		Color{escapeSequence: ansi.BG_BLACK},
+		fg,
+		bg,
 	)
 }
