@@ -7,10 +7,10 @@
 *.dll
 *.so
 *.dylib
+tuigo
 
 # Test binary, built with `go test -c`
 *.test
-*tuigo
 
 # Code coverage profiles and other test artifacts
 *.out
