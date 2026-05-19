@@ -21,3 +21,7 @@ func (c *Color) New(escapeSequence ansi.ANSIEscapeSequence) (Color, error) {
 		escapeSequence: escapeSequence,
 	}, nil
 }
+
+func (c *Color) String() string {
+	return string(c.escapeSequence)
+}
