@@ -20,7 +20,7 @@ type Renderer struct {
 	symbol          [utf8.UTFMax]byte
 }
 
-func New(frame Frame, writer RenderWriter) Renderer {
+func NewRenderer(frame Frame, writer RenderWriter) Renderer {
 	return Renderer{
 		frame:       frame,
 		firstRender: true,
