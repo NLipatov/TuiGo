@@ -4,6 +4,13 @@ type ANSIEscapeSequence string
 
 const (
 	RESET                         ANSIEscapeSequence = "\x1b[0m"
+	CLEAR_SCREEN                  ANSIEscapeSequence = "\x1b[2J"
+	CLEAR_SCROLLBACK              ANSIEscapeSequence = "\x1b[3J"
+	CURSOR_HOME                   ANSIEscapeSequence = "\x1b[H"
+	HIDE_CURSOR                   ANSIEscapeSequence = "\x1b[?25l"
+	SHOW_CURSOR                   ANSIEscapeSequence = "\x1b[?25h"
+	ENTER_ALTERNATE_SCREEN        ANSIEscapeSequence = "\x1b[?1049h"
+	EXIT_ALTERNATE_SCREEN         ANSIEscapeSequence = "\x1b[?1049l"
 	FG_BLACK                      ANSIEscapeSequence = "\x1b[0;30m"
 	FG_RED                        ANSIEscapeSequence = "\x1b[0;31m"
 	FG_GREEN                      ANSIEscapeSequence = "\x1b[0;32m"
