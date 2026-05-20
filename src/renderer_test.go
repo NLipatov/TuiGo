@@ -240,6 +240,91 @@ func TestRendererRenderDoesNotAllocateWhenRenderingChangedCell(t *testing.T) {
 	}
 }
 
+func BenchmarkRendererRenderUnchangedFrame(b *testing.B) {
+	frame := benchmarkFrame(b, 80, 24, 'x')
+	renderer := NewRenderer(frame, discardWriter{})
+	if err := renderer.Render(); err != nil {
+		b.Fatalf("Render() error = %v", err)
+	}
+
+	b.ReportAllocs()
+	for b.Loop() {
+		if err := renderer.Render(); err != nil {
+			b.Fatalf("Render() error = %v", err)
+		}
+	}
+}
+
+func BenchmarkRendererRenderFullFrame(b *testing.B) {
+	frame := benchmarkFrame(b, 80, 24, 'x')
+	renderer := NewRenderer(frame, discardWriter{})
+
+	b.ReportAllocs()
+	for b.Loop() {
+		renderer.firstRender = true
+		if err := renderer.Render(); err != nil {
+			b.Fatalf("Render() error = %v", err)
+		}
+	}
+}
+
+func BenchmarkRendererRenderChangedCell(b *testing.B) {
+	firstFrame := benchmarkFrame(b, 80, 24, 'x')
+	nextFrame := benchmarkFrame(b, 80, 24, 'x')
+	nextFrame.cells[len(nextFrame.cells)-1] = benchmarkCell(b, 'y')
+
+	renderer := NewRenderer(firstFrame, discardWriter{})
+	if err := renderer.Render(); err != nil {
+		b.Fatalf("Render() error = %v", err)
+	}
+
+	b.ReportAllocs()
+	for b.Loop() {
+		if err := renderer.NextFrame(nextFrame); err != nil {
+			b.Fatalf("NextFrame() error = %v", err)
+		}
+		if err := renderer.Render(); err != nil {
+			b.Fatalf("Render() error = %v", err)
+		}
+		if err := renderer.NextFrame(firstFrame); err != nil {
+			b.Fatalf("NextFrame() error = %v", err)
+		}
+		if err := renderer.Render(); err != nil {
+			b.Fatalf("Render() error = %v", err)
+		}
+	}
+}
+
+func benchmarkFrame(b *testing.B, width, height int, symbol rune) Frame {
+	b.Helper()
+
+	cells := make([]Cell, width*height)
+	cell := benchmarkCell(b, symbol)
+	for i := range cells {
+		cells[i] = cell
+	}
+
+	frame, err := NewFrame(width, height, cells)
+	if err != nil {
+		b.Fatalf("NewFrame() error = %v", err)
+	}
+	return frame
+}
+
+func benchmarkCell(b *testing.B, symbol rune) Cell {
+	b.Helper()
+
+	fg, err := ansi.NewColor(ansi.FG_RED)
+	if err != nil {
+		b.Fatalf("NewColor(%q) error = %v", ansi.FG_RED, err)
+	}
+	bg, err := ansi.NewColor(ansi.BG_BLACK)
+	if err != nil {
+		b.Fatalf("NewColor(%q) error = %v", ansi.BG_BLACK, err)
+	}
+	return NewCell(symbol, fg, bg)
+}
+
 type discardWriter struct{}
 
 func (discardWriter) Write(p []byte) (int, error) {
