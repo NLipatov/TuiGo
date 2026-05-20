@@ -93,7 +93,7 @@ func (r *Renderer) renderCell(x, y int, cell Cell) error {
 
 func (r *Renderer) moveCursor(x, y int) error {
 	buf := r.cursor[:0]
-	buf = append(buf, "\x1b["...)
+	buf = append(buf, ansi.CSI...)
 	buf = strconv.AppendInt(buf, int64(y+1), 10)
 	buf = append(buf, ';')
 	buf = strconv.AppendInt(buf, int64(x+1), 10)
