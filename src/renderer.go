@@ -91,6 +91,9 @@ func (r *Renderer) renderCell(x, y int, cell Cell) error {
 	return err
 }
 
+// moveCursor writes a CSI cursor-position command.
+// Terminal coordinates are 1-based and ordered as row;column, so frame x,y
+// becomes y+1;x+1. For example, x=9 y=4 writes "\x1b[5;10H".
 func (r *Renderer) moveCursor(x, y int) error {
 	buf := r.cursor[:0]
 	buf = append(buf, ansi.CSI...)
