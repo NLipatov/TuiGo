@@ -1,4 +1,4 @@
-package tuigo
+package domain
 
 import "tuigo/ansi"
 

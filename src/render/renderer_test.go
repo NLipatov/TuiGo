@@ -1,9 +1,10 @@
-package tuigo
+package render
 
 import (
 	"bytes"
 	"testing"
 	"tuigo/ansi"
+	"tuigo/domain"
 )
 
 func TestRendererRenderWritesCell(t *testing.T) {
@@ -16,9 +17,9 @@ func TestRendererRenderWritesCell(t *testing.T) {
 		t.Fatalf("NewColor(%q) error = %v", ansi.BG_BLACK, err)
 	}
 
-	frame, err := NewFrame(1, 1, []Cell{NewCell('x', fg, bg)})
+	frame, err := domain.NewFrame(1, 1, []domain.Cell{domain.NewCell('x', fg, bg)})
 	if err != nil {
-		t.Fatalf("NewFrame() error = %v", err)
+		t.Fatalf("domain.NewFrame() error = %v", err)
 	}
 
 	var out bytes.Buffer
@@ -44,9 +45,9 @@ func TestRendererRenderWritesNothingWhenFrameIsUnchanged(t *testing.T) {
 		t.Fatalf("NewColor(%q) error = %v", ansi.BG_BLACK, err)
 	}
 
-	frame, err := NewFrame(1, 1, []Cell{NewCell('x', fg, bg)})
+	frame, err := domain.NewFrame(1, 1, []domain.Cell{domain.NewCell('x', fg, bg)})
 	if err != nil {
-		t.Fatalf("NewFrame() error = %v", err)
+		t.Fatalf("domain.NewFrame() error = %v", err)
 	}
 
 	var out bytes.Buffer
@@ -74,19 +75,19 @@ func TestRendererRenderWritesOnlyChangedCell(t *testing.T) {
 		t.Fatalf("NewColor(%q) error = %v", ansi.BG_BLACK, err)
 	}
 
-	firstFrame, err := NewFrame(2, 1, []Cell{
-		NewCell('x', fg, bg),
-		NewCell('y', fg, bg),
+	firstFrame, err := domain.NewFrame(2, 1, []domain.Cell{
+		domain.NewCell('x', fg, bg),
+		domain.NewCell('y', fg, bg),
 	})
 	if err != nil {
-		t.Fatalf("NewFrame() error = %v", err)
+		t.Fatalf("domain.NewFrame() error = %v", err)
 	}
-	nextFrame, err := NewFrame(2, 1, []Cell{
-		NewCell('x', fg, bg),
-		NewCell('z', fg, bg),
+	nextFrame, err := domain.NewFrame(2, 1, []domain.Cell{
+		domain.NewCell('x', fg, bg),
+		domain.NewCell('z', fg, bg),
 	})
 	if err != nil {
-		t.Fatalf("NewFrame() error = %v", err)
+		t.Fatalf("domain.NewFrame() error = %v", err)
 	}
 
 	var out bytes.Buffer
@@ -119,16 +120,16 @@ func TestRendererRenderWritesFullFrameAfterResize(t *testing.T) {
 		t.Fatalf("NewColor(%q) error = %v", ansi.BG_BLACK, err)
 	}
 
-	firstFrame, err := NewFrame(1, 1, []Cell{NewCell('x', fg, bg)})
+	firstFrame, err := domain.NewFrame(1, 1, []domain.Cell{domain.NewCell('x', fg, bg)})
 	if err != nil {
-		t.Fatalf("NewFrame() error = %v", err)
+		t.Fatalf("domain.NewFrame() error = %v", err)
 	}
-	nextFrame, err := NewFrame(2, 1, []Cell{
-		NewCell('y', fg, bg),
-		NewCell('z', fg, bg),
+	nextFrame, err := domain.NewFrame(2, 1, []domain.Cell{
+		domain.NewCell('y', fg, bg),
+		domain.NewCell('z', fg, bg),
 	})
 	if err != nil {
-		t.Fatalf("NewFrame() error = %v", err)
+		t.Fatalf("domain.NewFrame() error = %v", err)
 	}
 
 	var out bytes.Buffer
@@ -162,9 +163,9 @@ func TestRendererRenderDoesNotAllocateWhenFrameIsUnchanged(t *testing.T) {
 		t.Fatalf("NewColor(%q) error = %v", ansi.BG_BLACK, err)
 	}
 
-	frame, err := NewFrame(1, 1, []Cell{NewCell('x', fg, bg)})
+	frame, err := domain.NewFrame(1, 1, []domain.Cell{domain.NewCell('x', fg, bg)})
 	if err != nil {
-		t.Fatalf("NewFrame() error = %v", err)
+		t.Fatalf("domain.NewFrame() error = %v", err)
 	}
 
 	renderer := NewRenderer(frame, discardWriter{})
@@ -190,9 +191,9 @@ func TestRendererRenderDoesNotAllocateWhenRenderingFullFrame(t *testing.T) {
 		t.Fatalf("NewColor(%q) error = %v", ansi.BG_BLACK, err)
 	}
 
-	frame, err := NewFrame(1, 1, []Cell{NewCell('x', fg, bg)})
+	frame, err := domain.NewFrame(1, 1, []domain.Cell{domain.NewCell('x', fg, bg)})
 	if err != nil {
-		t.Fatalf("NewFrame() error = %v", err)
+		t.Fatalf("domain.NewFrame() error = %v", err)
 	}
 
 	renderer := NewRenderer(frame, discardWriter{})
@@ -215,13 +216,13 @@ func TestRendererRenderDoesNotAllocateWhenRenderingChangedCell(t *testing.T) {
 		t.Fatalf("NewColor(%q) error = %v", ansi.BG_BLACK, err)
 	}
 
-	firstFrame, err := NewFrame(1, 1, []Cell{NewCell('x', fg, bg)})
+	firstFrame, err := domain.NewFrame(1, 1, []domain.Cell{domain.NewCell('x', fg, bg)})
 	if err != nil {
-		t.Fatalf("NewFrame() error = %v", err)
+		t.Fatalf("domain.NewFrame() error = %v", err)
 	}
-	nextFrame, err := NewFrame(1, 1, []Cell{NewCell('y', fg, bg)})
+	nextFrame, err := domain.NewFrame(1, 1, []domain.Cell{domain.NewCell('y', fg, bg)})
 	if err != nil {
-		t.Fatalf("NewFrame() error = %v", err)
+		t.Fatalf("domain.NewFrame() error = %v", err)
 	}
 
 	renderer := NewRenderer(firstFrame, discardWriter{})
@@ -270,8 +271,7 @@ func BenchmarkRendererRenderFullFrame(b *testing.B) {
 
 func BenchmarkRendererRenderChangedCell(b *testing.B) {
 	firstFrame := benchmarkFrame(b, 80, 24, 'x')
-	nextFrame := benchmarkFrame(b, 80, 24, 'x')
-	nextFrame.cells[len(nextFrame.cells)-1] = benchmarkCell(b, 'y')
+	nextFrame := benchmarkFrameWithLastCell(b, 80, 24, 'x', 'y')
 
 	renderer := NewRenderer(firstFrame, discardWriter{})
 	if err := renderer.Render(); err != nil {
@@ -295,23 +295,40 @@ func BenchmarkRendererRenderChangedCell(b *testing.B) {
 	}
 }
 
-func benchmarkFrame(b *testing.B, width, height int, symbol rune) Frame {
+func benchmarkFrame(b *testing.B, width, height int, symbol rune) domain.Frame {
 	b.Helper()
 
-	cells := make([]Cell, width*height)
+	cells := make([]domain.Cell, width*height)
 	cell := benchmarkCell(b, symbol)
 	for i := range cells {
 		cells[i] = cell
 	}
 
-	frame, err := NewFrame(width, height, cells)
+	frame, err := domain.NewFrame(width, height, cells)
 	if err != nil {
-		b.Fatalf("NewFrame() error = %v", err)
+		b.Fatalf("domain.NewFrame() error = %v", err)
 	}
 	return frame
 }
 
-func benchmarkCell(b *testing.B, symbol rune) Cell {
+func benchmarkFrameWithLastCell(b *testing.B, width, height int, symbol, lastSymbol rune) domain.Frame {
+	b.Helper()
+
+	cells := make([]domain.Cell, width*height)
+	cell := benchmarkCell(b, symbol)
+	for i := range cells {
+		cells[i] = cell
+	}
+	cells[len(cells)-1] = benchmarkCell(b, lastSymbol)
+
+	frame, err := domain.NewFrame(width, height, cells)
+	if err != nil {
+		b.Fatalf("domain.NewFrame() error = %v", err)
+	}
+	return frame
+}
+
+func benchmarkCell(b *testing.B, symbol rune) domain.Cell {
 	b.Helper()
 
 	fg, err := ansi.NewColor(ansi.FG_RED)
@@ -322,7 +339,7 @@ func benchmarkCell(b *testing.B, symbol rune) Cell {
 	if err != nil {
 		b.Fatalf("NewColor(%q) error = %v", ansi.BG_BLACK, err)
 	}
-	return NewCell(symbol, fg, bg)
+	return domain.NewCell(symbol, fg, bg)
 }
 
 type discardWriter struct{}

@@ -1,9 +1,10 @@
-package tuigo
+package render
 
 import (
 	"io"
 	"strconv"
 	"tuigo/ansi"
+	"tuigo/domain"
 	"unicode/utf8"
 )
 
@@ -13,14 +14,14 @@ type RenderWriter interface {
 }
 
 type Renderer struct {
-	frame, oldFrame Frame
+	frame, oldFrame domain.Frame
 	firstRender     bool
 	writer          RenderWriter
 	cursor          [32]byte
 	symbol          [utf8.UTFMax]byte
 }
 
-func NewRenderer(frame Frame, writer RenderWriter) Renderer {
+func NewRenderer(frame domain.Frame, writer RenderWriter) Renderer {
 	return Renderer{
 		frame:       frame,
 		firstRender: true,
@@ -28,7 +29,7 @@ func NewRenderer(frame Frame, writer RenderWriter) Renderer {
 	}
 }
 
-func (r *Renderer) NextFrame(newFrame Frame) error {
+func (r *Renderer) NextFrame(newFrame domain.Frame) error {
 	if newFrame.Width() != r.frame.Width() ||
 		newFrame.Height() != r.frame.Height() {
 		r.frame = newFrame
@@ -71,7 +72,7 @@ func (r *Renderer) Render() error {
 	return nil
 }
 
-func (r *Renderer) renderCell(x, y int, cell Cell) error {
+func (r *Renderer) renderCell(x, y int, cell domain.Cell) error {
 	if err := r.moveCursor(x, y); err != nil {
 		return err
 	}
@@ -81,12 +82,10 @@ func (r *Renderer) renderCell(x, y int, cell Cell) error {
 	if _, err := r.writer.WriteString(cell.Background().String()); err != nil {
 		return err
 	}
-
 	n := utf8.EncodeRune(r.symbol[:], cell.Symbol())
 	if _, err := r.writer.Write(r.symbol[:n]); err != nil {
 		return err
 	}
-
 	_, err := r.writer.WriteString(string(ansi.RESET))
 	return err
 }
@@ -101,7 +100,6 @@ func (r *Renderer) moveCursor(x, y int) error {
 	buf = append(buf, ';')
 	buf = strconv.AppendInt(buf, int64(x+1), 10)
 	buf = append(buf, 'H')
-
 	_, err := r.writer.Write(buf)
 	return err
 }
