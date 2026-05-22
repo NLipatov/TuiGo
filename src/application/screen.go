@@ -5,17 +5,17 @@ import (
 	"tuigo/ansi"
 )
 
-type Screen struct {
+type Session struct {
 	writer io.StringWriter
 }
 
-func NewScreen(writer io.StringWriter) Screen {
-	return Screen{
+func NewSession(writer io.StringWriter) Session {
+	return Session{
 		writer: writer,
 	}
 }
 
-func (s *Screen) Start() error {
+func (s *Session) Start() error {
 	if err := s.ansiCommand(ansi.ENTER_ALTERNATE_SCREEN); err != nil {
 		return err
 	}
@@ -31,7 +31,7 @@ func (s *Screen) Start() error {
 	return nil
 }
 
-func (s *Screen) Close() error {
+func (s *Session) Close() error {
 	if err := s.ansiCommand(ansi.SHOW_CURSOR); err != nil {
 		return err
 	}
@@ -41,7 +41,7 @@ func (s *Screen) Close() error {
 	return nil
 }
 
-func (s *Screen) ansiCommand(command ansi.ANSIEscapeSequence) error {
+func (s *Session) ansiCommand(command ansi.ANSIEscapeSequence) error {
 	if _, err := s.writer.WriteString(string(command)); err != nil {
 		return err
 	}
