@@ -10,7 +10,7 @@ import (
 	"time"
 )
 
-func TestNewInputRejectsNilDependencies(t *testing.T) {
+func TestNewInputListenerRejectsNilDependencies(t *testing.T) {
 	ctx := context.Background()
 	reader := &scriptedReadCloser{}
 	parser := &recordingParser{}
@@ -60,27 +60,27 @@ func TestNewInputRejectsNilDependencies(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			_, err := NewInput(tt.ctx, tt.reader, tt.parser, tt.events)
+			_, err := NewInputListener(tt.ctx, tt.reader, tt.parser, tt.events)
 			if !errors.Is(err, tt.want) {
-				t.Fatalf("NewInput() error = %v, want %v", err, tt.want)
+				t.Fatalf("NewInputListener() error = %v, want %v", err, tt.want)
 			}
 		})
 	}
 }
 
-func TestNewInputAcceptsValidDependencies(t *testing.T) {
-	_, err := NewInput(
+func TestNewInputListenerAcceptsValidDependencies(t *testing.T) {
+	_, err := NewInputListener(
 		context.Background(),
 		&scriptedReadCloser{},
 		&recordingParser{},
 		make(chan Event),
 	)
 	if err != nil {
-		t.Fatalf("NewInput() error = %v", err)
+		t.Fatalf("NewInputListener() error = %v", err)
 	}
 }
 
-func TestInputListenFeedsParserAndEmitsEvents(t *testing.T) {
+func TestInputListenerListenFeedsParserAndEmitsEvents(t *testing.T) {
 	readErr := errors.New("read failed")
 	reader := &scriptedReadCloser{
 		reads: [][]byte{
@@ -99,9 +99,9 @@ func TestInputListenFeedsParserAndEmitsEvents(t *testing.T) {
 		},
 	}
 	out := make(chan Event, 3)
-	input, err := NewInput(context.Background(), reader, parser, out)
+	input, err := NewInputListener(context.Background(), reader, parser, out)
 	if err != nil {
-		t.Fatalf("NewInput() error = %v", err)
+		t.Fatalf("NewInputListener() error = %v", err)
 	}
 
 	err = input.Listen()
@@ -140,14 +140,14 @@ func TestInputListenFeedsParserAndEmitsEvents(t *testing.T) {
 	}
 }
 
-func TestInputListenReturnsReadErrorWithoutCallingParser(t *testing.T) {
+func TestInputListenerListenReturnsReadErrorWithoutCallingParser(t *testing.T) {
 	readErr := errors.New("read failed")
 	reader := &scriptedReadCloser{err: readErr}
 	parser := &recordingParser{}
 	out := make(chan Event, 1)
-	input, err := NewInput(context.Background(), reader, parser, out)
+	input, err := NewInputListener(context.Background(), reader, parser, out)
 	if err != nil {
-		t.Fatalf("NewInput() error = %v", err)
+		t.Fatalf("NewInputListener() error = %v", err)
 	}
 
 	err = input.Listen()
@@ -164,14 +164,14 @@ func TestInputListenReturnsReadErrorWithoutCallingParser(t *testing.T) {
 	}
 }
 
-func TestInputListenReturnsContextErrorAndClosesReader(t *testing.T) {
+func TestInputListenerListenReturnsContextErrorAndClosesReader(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
 	reader := newBlockingReadCloser()
-	input, err := NewInput(ctx, reader, &recordingParser{}, make(chan Event))
+	input, err := NewInputListener(ctx, reader, &recordingParser{}, make(chan Event))
 	if err != nil {
-		t.Fatalf("NewInput() error = %v", err)
+		t.Fatalf("NewInputListener() error = %v", err)
 	}
 
 	errCh := make(chan error, 1)
@@ -201,17 +201,17 @@ func TestInputListenReturnsContextErrorAndClosesReader(t *testing.T) {
 	}
 }
 
-func TestInputCloseIsIdempotent(t *testing.T) {
+func TestInputListenerCloseIsIdempotent(t *testing.T) {
 	closeErr := errors.New("close failed")
 	reader := &scriptedReadCloser{closeErr: closeErr}
-	input, err := NewInput(
+	input, err := NewInputListener(
 		context.Background(),
 		reader,
 		&recordingParser{},
 		make(chan Event),
 	)
 	if err != nil {
-		t.Fatalf("NewInput() error = %v", err)
+		t.Fatalf("NewInputListener() error = %v", err)
 	}
 
 	if err := input.Close(); !errors.Is(err, closeErr) {
@@ -230,12 +230,16 @@ type recordingParser struct {
 	events func([]byte) []Event
 }
 
-func (p *recordingParser) Feed(buf []byte) []Event {
+func (p *recordingParser) Feed(buf []byte) ParseResult {
 	p.feeds = append(p.feeds, append([]byte(nil), buf...))
 	if p.events == nil {
-		return nil
+		return ParseResult{}
 	}
-	return p.events(buf)
+	return ParseResult{Events: p.events(buf)}
+}
+
+func (p *recordingParser) Timeout() ParseResult {
+	return ParseResult{}
 }
 
 type scriptedReadCloser struct {
