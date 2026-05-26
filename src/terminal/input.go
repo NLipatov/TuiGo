@@ -18,17 +18,6 @@ type Parser interface {
 	Feed(buf []byte) []Event
 }
 
-type KeyMod uint8
-
-const (
-	ModNone KeyMod = 0
-	ModCtrl KeyMod = 1 << iota
-	ModAlt
-	ModShift
-)
-
-type KeyCode int
-
 type Event struct {
 	Code KeyCode
 	Text string
