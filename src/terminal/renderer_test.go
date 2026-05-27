@@ -2,6 +2,7 @@ package terminal
 
 import (
 	"bytes"
+	"errors"
 	"testing"
 	"tuigo/ansi"
 	"tuigo/domain"
@@ -149,6 +150,39 @@ func TestRendererRenderWritesFullFrameAfterResize(t *testing.T) {
 	want := "\x1b[1;1H" + string(ansi.FG_RED) + string(ansi.BG_BLACK) + "y" + string(ansi.RESET) +
 		"\x1b[1;2H" + string(ansi.FG_RED) + string(ansi.BG_BLACK) + "z" + string(ansi.RESET)
 	if got := out.String(); got != want {
+		t.Fatalf("rendered output = %q, want %q", got, want)
+	}
+}
+
+func TestRendererRenderRetriesFullFrameAfterWriteError(t *testing.T) {
+	fg, err := ansi.NewColor(ansi.FG_RED)
+	if err != nil {
+		t.Fatalf("NewColor(%q) error = %v", ansi.FG_RED, err)
+	}
+	bg, err := ansi.NewColor(ansi.BG_BLACK)
+	if err != nil {
+		t.Fatalf("NewColor(%q) error = %v", ansi.BG_BLACK, err)
+	}
+
+	frame, err := domain.NewFrame(1, 1, []domain.Cell{domain.NewCell('x', fg, bg)})
+	if err != nil {
+		t.Fatalf("domain.NewFrame() error = %v", err)
+	}
+
+	writeErr := errors.New("write failed")
+	writer := failOnceWriter{err: writeErr}
+	renderer := NewRenderer(frame, &writer)
+
+	if err := renderer.Render(); !errors.Is(err, writeErr) {
+		t.Fatalf("Render() error = %v, want %v", err, writeErr)
+	}
+
+	if err := renderer.Render(); err != nil {
+		t.Fatalf("Render() error = %v", err)
+	}
+
+	want := "\x1b[1;1H" + string(ansi.FG_RED) + string(ansi.BG_BLACK) + "x" + string(ansi.RESET)
+	if got := writer.out.String(); got != want {
 		t.Fatalf("rendered output = %q, want %q", got, want)
 	}
 }
@@ -350,4 +384,18 @@ func (discardWriter) Write(p []byte) (int, error) {
 
 func (discardWriter) WriteString(s string) (int, error) {
 	return len(s), nil
+}
+
+type failOnceWriter struct {
+	err    error
+	failed bool
+	out    bytes.Buffer
+}
+
+func (w *failOnceWriter) Write(p []byte) (int, error) {
+	if !w.failed {
+		w.failed = true
+		return 0, w.err
+	}
+	return w.out.Write(p)
 }
