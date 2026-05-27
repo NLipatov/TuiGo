@@ -8,20 +8,15 @@ import (
 	"unicode/utf8"
 )
 
-type RenderWriter interface {
-	io.Writer
-	io.StringWriter
-}
-
 type Renderer struct {
 	frame, oldFrame domain.Frame
 	firstRender     bool
-	writer          RenderWriter
-	cursor          [32]byte
+	writer          io.Writer
 	symbol          [utf8.UTFMax]byte
+	out             []byte
 }
 
-func NewRenderer(frame domain.Frame, writer RenderWriter) Renderer {
+func NewRenderer(frame domain.Frame, writer io.Writer) Renderer {
 	return Renderer{
 		frame:       frame,
 		firstRender: true,
@@ -49,18 +44,14 @@ func (r *Renderer) Render() error {
 				return err
 			}
 			if r.firstRender {
-				if err := r.renderCell(x, y, cell); err != nil {
-					return err
-				}
+				r.renderCell(x, y, cell)
 			} else {
 				oldCell, err := r.oldFrame.CellAt(x, y)
 				if err != nil {
 					return err
 				}
 				if cell != oldCell {
-					if err := r.renderCell(x, y, cell); err != nil {
-						return err
-					}
+					r.renderCell(x, y, cell)
 				}
 			}
 		}
@@ -69,37 +60,31 @@ func (r *Renderer) Render() error {
 		r.firstRender = false
 	}
 	r.oldFrame = r.frame
+	if len(r.out) > 0 {
+		if _, err := r.writer.Write(r.out); err != nil {
+			return err
+		}
+		r.out = r.out[:0]
+	}
 	return nil
 }
 
-func (r *Renderer) renderCell(x, y int, cell domain.Cell) error {
-	if err := r.moveCursor(x, y); err != nil {
-		return err
-	}
-	if _, err := r.writer.WriteString(cell.Foreground().String()); err != nil {
-		return err
-	}
-	if _, err := r.writer.WriteString(cell.Background().String()); err != nil {
-		return err
-	}
+func (r *Renderer) renderCell(x, y int, cell domain.Cell) {
+	r.moveCursor(x, y)
+	r.out = append(r.out, cell.Foreground().String()...)
+	r.out = append(r.out, cell.Background().String()...)
 	n := utf8.EncodeRune(r.symbol[:], cell.Symbol())
-	if _, err := r.writer.Write(r.symbol[:n]); err != nil {
-		return err
-	}
-	_, err := r.writer.WriteString(string(ansi.RESET))
-	return err
+	r.out = append(r.out, r.symbol[:n]...)
+	r.out = append(r.out, ansi.RESET...)
 }
 
 // moveCursor writes a CSI cursor-position command.
 // Terminal coordinates are 1-based and ordered as row;column, so frame x,y
 // becomes y+1;x+1. For example, x=9 y=4 writes "\x1b[5;10H".
-func (r *Renderer) moveCursor(x, y int) error {
-	buf := r.cursor[:0]
-	buf = append(buf, ansi.CSI...)
-	buf = strconv.AppendInt(buf, int64(y+1), 10)
-	buf = append(buf, ';')
-	buf = strconv.AppendInt(buf, int64(x+1), 10)
-	buf = append(buf, 'H')
-	_, err := r.writer.Write(buf)
-	return err
+func (r *Renderer) moveCursor(x, y int) {
+	r.out = append(r.out, ansi.CSI...)
+	r.out = strconv.AppendInt(r.out, int64(y+1), 10)
+	r.out = append(r.out, ';')
+	r.out = strconv.AppendInt(r.out, int64(x+1), 10)
+	r.out = append(r.out, 'H')
 }
