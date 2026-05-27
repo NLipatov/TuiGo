@@ -198,7 +198,7 @@ func TestRendererRenderDoesNotAllocateWhenRenderingFullFrame(t *testing.T) {
 
 	renderer := NewRenderer(frame, discardWriter{})
 	allocs := testing.AllocsPerRun(1000, func() {
-		renderer.firstRender = true
+		renderer.fullRepaint = true
 		_ = renderer.Render()
 	})
 	if allocs != 0 {
@@ -262,7 +262,7 @@ func BenchmarkRendererRenderFullFrame(b *testing.B) {
 
 	b.ReportAllocs()
 	for b.Loop() {
-		renderer.firstRender = true
+		renderer.fullRepaint = true
 		if err := renderer.Render(); err != nil {
 			b.Fatalf("Render() error = %v", err)
 		}
