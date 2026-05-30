@@ -147,8 +147,8 @@ func TestRendererRenderWritesFullFrameAfterResize(t *testing.T) {
 		t.Fatalf("Render() error = %v", err)
 	}
 
-	want := "\x1b[1;1H" + string(ansi.FG_RED) + string(ansi.BG_BLACK) + "y" + string(ansi.RESET) +
-		"\x1b[1;2H" + string(ansi.FG_RED) + string(ansi.BG_BLACK) + "z" + string(ansi.RESET)
+	want := "\x1b[1;1H" + string(ansi.FG_RED) + string(ansi.BG_BLACK) + "y" +
+		"\x1b[1;2H" + "z" + string(ansi.RESET)
 	if got := out.String(); got != want {
 		t.Fatalf("rendered output = %q, want %q", got, want)
 	}

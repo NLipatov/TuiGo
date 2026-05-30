@@ -10,12 +10,18 @@ import (
 
 const estimatedCellBytes = 36
 
+type renderStyle struct {
+	fg, bg ansi.Color
+	set    bool
+}
+
 type Renderer struct {
 	frame, oldFrame domain.Frame
 	fullRepaint     bool
 	writer          io.Writer
 	symbol          [utf8.UTFMax]byte
 	out             []byte
+	style           renderStyle
 }
 
 func NewRenderer(frame domain.Frame, writer io.Writer) Renderer {
@@ -40,6 +46,7 @@ func (r *Renderer) NextFrame(newFrame domain.Frame) error {
 }
 
 func (r *Renderer) Render() error {
+	r.style.set = false
 	r.out = r.out[:0]
 	if r.fullRepaint {
 		if err := r.renderFullFrame(); err != nil {
@@ -49,6 +56,9 @@ func (r *Renderer) Render() error {
 		if err := r.renderDiffFrame(); err != nil {
 			return err
 		}
+	}
+	if len(r.out) > 0 {
+		r.out = append(r.out, ansi.RESET...)
 	}
 	if err := r.flush(); err != nil {
 		r.fullRepaint = true
@@ -93,11 +103,21 @@ func (r *Renderer) renderDiffFrame() error {
 
 func (r *Renderer) renderCell(x, y int, cell domain.Cell) {
 	r.cursorMove(x, y)
-	r.out = append(r.out, cell.Foreground().String()...)
-	r.out = append(r.out, cell.Background().String()...)
+	r.renderStyle(cell)
 	n := utf8.EncodeRune(r.symbol[:], cell.Symbol())
 	r.out = append(r.out, r.symbol[:n]...)
-	r.out = append(r.out, ansi.RESET...)
+}
+
+func (r *Renderer) renderStyle(cell domain.Cell) {
+	if !r.style.set || r.style.fg != cell.Foreground() {
+		r.out = append(r.out, cell.Foreground().String()...)
+		r.style.fg = cell.Foreground()
+	}
+	if !r.style.set || r.style.bg != cell.Background() {
+		r.out = append(r.out, cell.Background().String()...)
+		r.style.bg = cell.Background()
+	}
+	r.style.set = true
 }
 
 // cursorMove appends a CSI cursor-position command.
