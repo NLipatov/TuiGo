@@ -197,6 +197,68 @@ func TestFrameCellAtRejectsOutOfBoundsCoordinates(t *testing.T) {
 	}
 }
 
+func TestFrameRowAtReadsCellsByRowMajorIndex(t *testing.T) {
+	cells := []Cell{
+		testCell(t, ansi.FG_BLACK),
+		testCell(t, ansi.FG_RED),
+		testCell(t, ansi.FG_GREEN),
+		testCell(t, ansi.FG_YELLOW),
+		testCell(t, ansi.FG_BLUE),
+		testCell(t, ansi.FG_PURPLE),
+	}
+
+	frame := Frame{
+		width:  3,
+		height: 2,
+		cells:  cells,
+	}
+
+	got, err := frame.RowAt(1)
+	if err != nil {
+		t.Fatalf("RowAt() error = %v", err)
+	}
+
+	want := cells[3:6]
+	if len(got) != len(want) {
+		t.Fatalf("len(RowAt()) = %d, want %d", len(got), len(want))
+	}
+	for i := range want {
+		if got[i] != want[i] {
+			t.Fatalf("RowAt()[%d] = %#v, want %#v", i, got[i], want[i])
+		}
+	}
+}
+
+func TestFrameRowAtRejectsOutOfBoundsRows(t *testing.T) {
+	tests := []struct {
+		name string
+		y    int
+	}{
+		{
+			name: "y below zero",
+			y:    -1,
+		},
+		{
+			name: "y equals height",
+			y:    2,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			frame, err := NewFrame(3, 2, make([]Cell, 6))
+			if err != nil {
+				t.Fatalf("NewFrame() error = %v", err)
+			}
+
+			_, err = frame.RowAt(tt.y)
+			if !errors.Is(err, ErrOutOfFrameBounds) {
+				t.Fatalf("RowAt() error = %v, want %v", err, ErrOutOfFrameBounds)
+			}
+		})
+	}
+}
+
 func TestFrameAccessDoesNotAllocate(t *testing.T) {
 	frame := Frame{
 		width:  2,
