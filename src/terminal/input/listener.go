@@ -1,4 +1,4 @@
-package terminal
+package input
 
 import (
 	"context"
@@ -28,13 +28,7 @@ type Parser interface {
 	Timeout() ParseResult
 }
 
-type Event struct {
-	Code KeyCode
-	Text string
-	Mod  KeyMod
-}
-
-type InputListener struct {
+type Listener struct {
 	ctx             context.Context
 	reader          io.ReadCloser
 	parser          Parser
@@ -43,20 +37,20 @@ type InputListener struct {
 	closeReaderErr  error
 }
 
-func NewInputListener(ctx context.Context, reader io.ReadCloser, parser Parser, ch chan<- Event) (InputListener, error) {
+func NewListener(ctx context.Context, reader io.ReadCloser, parser Parser, ch chan<- Event) (Listener, error) {
 	if ctx == nil {
-		return InputListener{}, ErrNilContext
+		return Listener{}, ErrNilContext
 	}
 	if reader == nil {
-		return InputListener{}, ErrNilReader
+		return Listener{}, ErrNilReader
 	}
 	if parser == nil {
-		return InputListener{}, ErrNilParser
+		return Listener{}, ErrNilParser
 	}
 	if ch == nil {
-		return InputListener{}, ErrNilEventChan
+		return Listener{}, ErrNilEventChan
 	}
-	return InputListener{
+	return Listener{
 		ctx:    ctx,
 		reader: reader,
 		out:    ch,
@@ -64,7 +58,7 @@ func NewInputListener(ctx context.Context, reader io.ReadCloser, parser Parser, 
 	}, nil
 }
 
-func (i *InputListener) Listen() error {
+func (i *Listener) Listen() error {
 	done := make(chan struct{})
 	defer close(done)
 	go func() {
@@ -125,7 +119,7 @@ func (i *InputListener) Listen() error {
 	}
 }
 
-func (i *InputListener) handleParserResult(result ParseResult, timeout *time.Timer) error {
+func (i *Listener) handleParserResult(result ParseResult, timeout *time.Timer) error {
 	for _, event := range result.Events {
 		select {
 		case <-i.ctx.Done():
@@ -142,7 +136,7 @@ func (i *InputListener) handleParserResult(result ParseResult, timeout *time.Tim
 	return nil
 }
 
-func (i *InputListener) stopTimer(t *time.Timer) {
+func (i *Listener) stopTimer(t *time.Timer) {
 	if !t.Stop() {
 		select {
 		case <-t.C:
@@ -151,7 +145,7 @@ func (i *InputListener) stopTimer(t *time.Timer) {
 	}
 }
 
-func (i *InputListener) Close() error {
+func (i *Listener) Close() error {
 	i.closeReaderOnce.Do(func() {
 		i.closeReaderErr = i.reader.Close()
 	})

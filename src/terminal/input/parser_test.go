@@ -1,6 +1,8 @@
-package terminal
+package input
 
-import "testing"
+import (
+	"testing"
+)
 
 func TestInputParserParsesRunes(t *testing.T) {
 	parser := NewInputParser()

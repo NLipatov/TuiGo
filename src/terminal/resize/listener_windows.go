@@ -1,6 +1,6 @@
 //go:build windows
 
-package terminal
+package resize
 
 import (
 	"context"
@@ -9,21 +9,21 @@ import (
 
 const pollInterval = time.Millisecond * 150
 
-type ResizeListener struct {
+type Listener struct {
 	ctx    context.Context
-	out    chan<- ResizeEvent
+	out    chan<- Event
 	device Device
 }
 
-func NewResizeListener(ctx context.Context, ch chan ResizeEvent, device Device) ResizeListener {
-	return ResizeListener{
+func NewListener(ctx context.Context, ch chan Event, device Device) Listener {
+	return Listener{
 		ctx:    ctx,
 		out:    ch,
 		device: device,
 	}
 }
 
-func (r *ResizeListener) Listen() error {
+func (r *Listener) Listen() error {
 	prevWidth, prevHeight, err := r.device.Size()
 	if err != nil {
 		return err
@@ -43,7 +43,7 @@ func (r *ResizeListener) Listen() error {
 				continue
 			}
 			prevWidth, prevHeight = width, height
-			event := ResizeEvent{
+			event := Event{
 				Width:  width,
 				Height: height,
 			}

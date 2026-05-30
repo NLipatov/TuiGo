@@ -1,4 +1,4 @@
-package terminal
+package input
 
 import (
 	"context"
@@ -60,7 +60,7 @@ func TestNewInputListenerRejectsNilDependencies(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			_, err := NewInputListener(tt.ctx, tt.reader, tt.parser, tt.events)
+			_, err := NewListener(tt.ctx, tt.reader, tt.parser, tt.events)
 			if !errors.Is(err, tt.want) {
 				t.Fatalf("NewInputListener() error = %v, want %v", err, tt.want)
 			}
@@ -69,7 +69,7 @@ func TestNewInputListenerRejectsNilDependencies(t *testing.T) {
 }
 
 func TestNewInputListenerAcceptsValidDependencies(t *testing.T) {
-	_, err := NewInputListener(
+	_, err := NewListener(
 		context.Background(),
 		&scriptedReadCloser{},
 		&recordingParser{},
@@ -99,7 +99,7 @@ func TestInputListenerListenFeedsParserAndEmitsEvents(t *testing.T) {
 		},
 	}
 	out := make(chan Event, 3)
-	input, err := NewInputListener(context.Background(), reader, parser, out)
+	input, err := NewListener(context.Background(), reader, parser, out)
 	if err != nil {
 		t.Fatalf("NewInputListener() error = %v", err)
 	}
@@ -145,7 +145,7 @@ func TestInputListenerListenReturnsReadErrorWithoutCallingParser(t *testing.T) {
 	reader := &scriptedReadCloser{err: readErr}
 	parser := &recordingParser{}
 	out := make(chan Event, 1)
-	input, err := NewInputListener(context.Background(), reader, parser, out)
+	input, err := NewListener(context.Background(), reader, parser, out)
 	if err != nil {
 		t.Fatalf("NewInputListener() error = %v", err)
 	}
@@ -169,7 +169,7 @@ func TestInputListenerListenReturnsContextErrorAndClosesReader(t *testing.T) {
 	defer cancel()
 
 	reader := newBlockingReadCloser()
-	input, err := NewInputListener(ctx, reader, &recordingParser{}, make(chan Event))
+	input, err := NewListener(ctx, reader, &recordingParser{}, make(chan Event))
 	if err != nil {
 		t.Fatalf("NewInputListener() error = %v", err)
 	}
@@ -204,7 +204,7 @@ func TestInputListenerListenReturnsContextErrorAndClosesReader(t *testing.T) {
 func TestInputListenerCloseIsIdempotent(t *testing.T) {
 	closeErr := errors.New("close failed")
 	reader := &scriptedReadCloser{closeErr: closeErr}
-	input, err := NewInputListener(
+	input, err := NewListener(
 		context.Background(),
 		reader,
 		&recordingParser{},

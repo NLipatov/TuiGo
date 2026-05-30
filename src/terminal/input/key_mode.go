@@ -1,4 +1,4 @@
-package terminal
+package input
 
 type KeyMod uint8
 
