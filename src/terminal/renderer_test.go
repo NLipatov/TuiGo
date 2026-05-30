@@ -111,6 +111,110 @@ func TestRendererRenderWritesOnlyChangedCell(t *testing.T) {
 	}
 }
 
+func TestRendererRenderWritesAdjacentChangedCellsAsSingleRun(t *testing.T) {
+	fg, err := ansi.NewColor(ansi.FG_RED)
+	if err != nil {
+		t.Fatalf("NewColor(%q) error = %v", ansi.FG_RED, err)
+	}
+	bg, err := ansi.NewColor(ansi.BG_BLACK)
+	if err != nil {
+		t.Fatalf("NewColor(%q) error = %v", ansi.BG_BLACK, err)
+	}
+	cell := func(symbol rune) domain.Cell {
+		return domain.NewCell(symbol, fg, bg)
+	}
+
+	firstFrame, err := domain.NewFrame(4, 1, []domain.Cell{
+		cell('a'),
+		cell('b'),
+		cell('c'),
+		cell('d'),
+	})
+	if err != nil {
+		t.Fatalf("domain.NewFrame() error = %v", err)
+	}
+	nextFrame, err := domain.NewFrame(4, 1, []domain.Cell{
+		cell('a'),
+		cell('x'),
+		cell('y'),
+		cell('d'),
+	})
+	if err != nil {
+		t.Fatalf("domain.NewFrame() error = %v", err)
+	}
+
+	var out bytes.Buffer
+	renderer := NewRenderer(firstFrame, &out)
+	if err := renderer.Render(); err != nil {
+		t.Fatalf("Render() error = %v", err)
+	}
+
+	out.Reset()
+	if err := renderer.NextFrame(nextFrame); err != nil {
+		t.Fatalf("NextFrame() error = %v", err)
+	}
+	if err := renderer.Render(); err != nil {
+		t.Fatalf("Render() error = %v", err)
+	}
+
+	want := "\x1b[1;2H" + string(ansi.FG_RED) + string(ansi.BG_BLACK) + "xy" + string(ansi.RESET)
+	if got := out.String(); got != want {
+		t.Fatalf("rendered output = %q, want %q", got, want)
+	}
+}
+
+func TestRendererRenderWritesSeparatedChangedCellsAsSeparateRuns(t *testing.T) {
+	fg, err := ansi.NewColor(ansi.FG_RED)
+	if err != nil {
+		t.Fatalf("NewColor(%q) error = %v", ansi.FG_RED, err)
+	}
+	bg, err := ansi.NewColor(ansi.BG_BLACK)
+	if err != nil {
+		t.Fatalf("NewColor(%q) error = %v", ansi.BG_BLACK, err)
+	}
+	cell := func(symbol rune) domain.Cell {
+		return domain.NewCell(symbol, fg, bg)
+	}
+
+	firstFrame, err := domain.NewFrame(4, 1, []domain.Cell{
+		cell('a'),
+		cell('b'),
+		cell('c'),
+		cell('d'),
+	})
+	if err != nil {
+		t.Fatalf("domain.NewFrame() error = %v", err)
+	}
+	nextFrame, err := domain.NewFrame(4, 1, []domain.Cell{
+		cell('a'),
+		cell('x'),
+		cell('c'),
+		cell('y'),
+	})
+	if err != nil {
+		t.Fatalf("domain.NewFrame() error = %v", err)
+	}
+
+	var out bytes.Buffer
+	renderer := NewRenderer(firstFrame, &out)
+	if err := renderer.Render(); err != nil {
+		t.Fatalf("Render() error = %v", err)
+	}
+
+	out.Reset()
+	if err := renderer.NextFrame(nextFrame); err != nil {
+		t.Fatalf("NextFrame() error = %v", err)
+	}
+	if err := renderer.Render(); err != nil {
+		t.Fatalf("Render() error = %v", err)
+	}
+
+	want := "\x1b[1;2H" + string(ansi.FG_RED) + string(ansi.BG_BLACK) + "x" + "\x1b[1;4H" + "y" + string(ansi.RESET)
+	if got := out.String(); got != want {
+		t.Fatalf("rendered output = %q, want %q", got, want)
+	}
+}
+
 func TestRendererRenderWritesFullFrameAfterResize(t *testing.T) {
 	fg, err := ansi.NewColor(ansi.FG_RED)
 	if err != nil {
@@ -147,8 +251,7 @@ func TestRendererRenderWritesFullFrameAfterResize(t *testing.T) {
 		t.Fatalf("Render() error = %v", err)
 	}
 
-	want := "\x1b[1;1H" + string(ansi.FG_RED) + string(ansi.BG_BLACK) + "y" +
-		"\x1b[1;2H" + "z" + string(ansi.RESET)
+	want := "\x1b[1;1H" + string(ansi.FG_RED) + string(ansi.BG_BLACK) + "yz" + string(ansi.RESET)
 	if got := out.String(); got != want {
 		t.Fatalf("rendered output = %q, want %q", got, want)
 	}
@@ -329,6 +432,32 @@ func BenchmarkRendererRenderChangedCell(b *testing.B) {
 	}
 }
 
+func BenchmarkRendererRenderChangedRun(b *testing.B) {
+	firstFrame := benchmarkFrame(b, 80, 24, 'x')
+	nextFrame := benchmarkFrameWithRun(b, 80, 24, 'x', 'y', 1860, 40)
+
+	renderer := NewRenderer(firstFrame, discardWriter{})
+	if err := renderer.Render(); err != nil {
+		b.Fatalf("Render() error = %v", err)
+	}
+
+	b.ReportAllocs()
+	for b.Loop() {
+		if err := renderer.NextFrame(nextFrame); err != nil {
+			b.Fatalf("NextFrame() error = %v", err)
+		}
+		if err := renderer.Render(); err != nil {
+			b.Fatalf("Render() error = %v", err)
+		}
+		if err := renderer.NextFrame(firstFrame); err != nil {
+			b.Fatalf("NextFrame() error = %v", err)
+		}
+		if err := renderer.Render(); err != nil {
+			b.Fatalf("Render() error = %v", err)
+		}
+	}
+}
+
 func benchmarkFrame(b *testing.B, width, height int, symbol rune) domain.Frame {
 	b.Helper()
 
@@ -354,6 +483,29 @@ func benchmarkFrameWithLastCell(b *testing.B, width, height int, symbol, lastSym
 		cells[i] = cell
 	}
 	cells[len(cells)-1] = benchmarkCell(b, lastSymbol)
+
+	frame, err := domain.NewFrame(width, height, cells)
+	if err != nil {
+		b.Fatalf("domain.NewFrame() error = %v", err)
+	}
+	return frame
+}
+
+func benchmarkFrameWithRun(b *testing.B, width, height int, symbol, runSymbol rune, start, count int) domain.Frame {
+	b.Helper()
+
+	cells := make([]domain.Cell, width*height)
+	if start < 0 || count < 0 || start+count > len(cells) {
+		b.Fatalf("invalid run bounds: start=%d count=%d len=%d", start, count, len(cells))
+	}
+	cell := benchmarkCell(b, symbol)
+	for i := range cells {
+		cells[i] = cell
+	}
+	runCell := benchmarkCell(b, runSymbol)
+	for i := range count {
+		cells[start+i] = runCell
+	}
 
 	frame, err := domain.NewFrame(width, height, cells)
 	if err != nil {

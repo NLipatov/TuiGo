@@ -71,41 +71,58 @@ func (r *Renderer) Render() error {
 
 func (r *Renderer) renderFullFrame() error {
 	for y := range r.frame.Height() {
-		for x := range r.frame.Width() {
-			cell, err := r.frame.CellAt(x, y)
-			if err != nil {
-				return err
-			}
-			r.renderCell(x, y, cell)
+		cells, err := r.frame.RowAt(y)
+		if err != nil {
+			return err
 		}
+		r.renderRow(0, y, cells)
 	}
 	return nil
 }
 
 func (r *Renderer) renderDiffFrame() error {
 	for y := range r.frame.Height() {
-		for x := range r.frame.Width() {
-			cell, err := r.frame.CellAt(x, y)
-			if err != nil {
-				return err
+		row, err := r.frame.RowAt(y)
+		if err != nil {
+			return err
+		}
+		oldRow, err := r.oldFrame.RowAt(y)
+		if err != nil {
+			return err
+		}
+		for x := 0; x < len(row); {
+			if row[x] == oldRow[x] {
+				x++
+				continue
 			}
-			oldCell, err := r.oldFrame.CellAt(x, y)
-			if err != nil {
-				return err
+			start := x
+			for x < len(row) && row[x] != oldRow[x] {
+				x++
 			}
-			if cell != oldCell {
-				r.renderCell(x, y, cell)
-			}
+			r.renderRow(start, y, row[start:x])
 		}
 	}
 	return nil
 }
 
-func (r *Renderer) renderCell(x, y int, cell domain.Cell) {
+func (r *Renderer) renderRow(x, y int, cells []domain.Cell) {
 	r.cursorMove(x, y)
-	r.renderStyle(cell)
-	n := utf8.EncodeRune(r.symbol[:], cell.Symbol())
-	r.out = append(r.out, r.symbol[:n]...)
+	for _, cell := range cells {
+		r.renderStyle(cell)
+		n := utf8.EncodeRune(r.symbol[:], cell.Symbol())
+		r.out = append(r.out, r.symbol[:n]...)
+	}
+}
+
+// cursorMove appends a CSI cursor-position command.
+// Terminal coordinates are 1-based and ordered as row;column, so frame x,y
+// becomes y+1;x+1. For example, x=9 y=4 appends "\x1b[5;10H".
+func (r *Renderer) cursorMove(x, y int) {
+	r.out = append(r.out, ansi.CSI...)
+	r.out = strconv.AppendInt(r.out, int64(y+1), 10)
+	r.out = append(r.out, ';')
+	r.out = strconv.AppendInt(r.out, int64(x+1), 10)
+	r.out = append(r.out, 'H')
 }
 
 func (r *Renderer) renderStyle(cell domain.Cell) {
@@ -118,17 +135,6 @@ func (r *Renderer) renderStyle(cell domain.Cell) {
 		r.style.bg = cell.Background()
 	}
 	r.style.set = true
-}
-
-// cursorMove appends a CSI cursor-position command.
-// Terminal coordinates are 1-based and ordered as row;column, so frame x,y
-// becomes y+1;x+1. For example, x=9 y=4 appends "\x1b[5;10H".
-func (r *Renderer) cursorMove(x, y int) {
-	r.out = append(r.out, ansi.CSI...)
-	r.out = strconv.AppendInt(r.out, int64(y+1), 10)
-	r.out = append(r.out, ';')
-	r.out = strconv.AppendInt(r.out, int64(x+1), 10)
-	r.out = append(r.out, 'H')
 }
 
 func (r *Renderer) flush() error {
