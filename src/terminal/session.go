@@ -56,6 +56,10 @@ func NewSession(ctx context.Context, reader *os.File, writer io.Writer) (Session
 	}, nil
 }
 
+func (s *Session) Size() (width int, height int, err error) {
+	return s.device.Size()
+}
+
 func (s *Session) Start() (<-chan Event, error) {
 	if s.started {
 		return s.events, nil
