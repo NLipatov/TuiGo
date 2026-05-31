@@ -54,7 +54,7 @@ func (s *Session) Start() (<-chan Event, error) {
 	events, err := s.startEventLoop()
 	if err != nil {
 		if unsetTerminalErr := s.restoreTerminal(); unsetTerminalErr != nil {
-			return nil, fmt.Errorf("failed to start event loop: %w; terminal setup was not unset: %v", err, unsetTerminalErr)
+			return nil, fmt.Errorf("failed to start event loop: %w; terminal was not restored: %v", err, unsetTerminalErr)
 		}
 		return nil, err
 	}
@@ -104,12 +104,25 @@ func (s *Session) startEventLoop() (chan Event, error) {
 		return nil, err
 	}
 	outCh := make(chan Event)
+	errCh := make(chan error, 2)
 	go func() {
 		defer close(outCh)
 		for {
 			select {
 			case <-s.ctx.Done():
 				return
+			case err, ok := <-errCh:
+				if !ok {
+					return
+				}
+				select {
+				case <-s.ctx.Done():
+					return
+				case outCh <- Event{
+					Type: EventError,
+					Err:  err,
+				}:
+				}
 			case event, ok := <-resizeCh:
 				if !ok {
 					return
@@ -138,12 +151,28 @@ func (s *Session) startEventLoop() (chan Event, error) {
 		}
 	}()
 	go func() {
-		// ToDo: handle error
-		_ = resizeListener.Listen()
+		if err := resizeListener.Listen(); err != nil {
+			if s.ctx.Err() != nil {
+				return
+			}
+			select {
+			case <-s.ctx.Done():
+				return
+			case errCh <- err:
+			}
+		}
 	}()
 	go func() {
-		// ToDo: handle error
-		_ = keyListener.Listen()
+		if err := keyListener.Listen(); err != nil {
+			if s.ctx.Err() != nil {
+				return
+			}
+			select {
+			case <-s.ctx.Done():
+				return
+			case errCh <- err:
+			}
+		}
 	}()
 	return outCh, nil
 }

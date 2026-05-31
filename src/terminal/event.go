@@ -11,10 +11,12 @@ const (
 	EventUnknown EventType = iota
 	EventResize
 	EventKey
+	EventError
 )
 
 type Event struct {
 	Type   EventType
+	Err    error
 	Key    input.Event
 	Resize resize.Event
 }
