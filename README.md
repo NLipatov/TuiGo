@@ -7,7 +7,7 @@ Frame-based terminal UI runtime for Go.
 From the repository root:
 
 ```sh
-go -C src run ./examples/hello
+go run ./examples/hello
 ```
 
 Press `q`, `Esc`, or `Ctrl+C` to quit.
