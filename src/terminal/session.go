@@ -3,9 +3,11 @@ package terminal
 import (
 	"context"
 	"errors"
+	"fmt"
 	"io"
 	"os"
 	"tuigo/ansi"
+	"tuigo/terminal/input"
 	"tuigo/terminal/resize"
 )
 
@@ -46,15 +48,25 @@ func (s *Session) Start() (<-chan Event, error) {
 	if s.started {
 		return s.events, nil
 	}
-	if err := s.startTerminal(); err != nil {
+	if err := s.setupTerminal(); err != nil {
 		return nil, err
 	}
-	s.events = s.startEventLoop()
+	events, err := s.startEventLoop()
+	if err != nil {
+		if unsetTerminalErr := s.restoreTerminal(); unsetTerminalErr != nil {
+			return nil, fmt.Errorf("failed to start event loop: %w; terminal setup was not unset: %v", err, unsetTerminalErr)
+		}
+		return nil, err
+	}
+	s.events = events
 	s.started = true
 	return s.events, nil
 }
 
-func (s *Session) startTerminal() error {
+func (s *Session) setupTerminal() error {
+	if err := s.device.EnableRawMode(); err != nil {
+		return err
+	}
 	if err := s.ansiCommand(ansi.ENTER_ALTERNATE_SCREEN); err != nil {
 		return err
 	}
@@ -70,46 +82,74 @@ func (s *Session) startTerminal() error {
 	return nil
 }
 
-func (s *Session) startEventLoop() chan Event {
-	resizeIn := make(chan resize.Event)
-	out := make(chan Event)
-	go func() {
-		defer close(out)
-		for {
-			select {
-			case <-s.ctx.Done():
-				return
-			case event, ok := <-resizeIn:
-				if !ok {
-					return
-				}
-				select {
-				case <-s.ctx.Done():
-					return
-				case out <- Event{
-					Type:   EventResize,
-					Resize: event,
-				}:
-				}
-			}
-		}
-	}()
-	resizeListener := resize.NewListener(s.ctx, resizeIn, &s.device)
-	go func() {
-		// ToDo: handle error
-		_ = resizeListener.Listen()
-	}()
-	return out
-}
-
-func (s *Session) Close() error {
+func (s *Session) restoreTerminal() error {
 	if err := s.ansiCommand(ansi.SHOW_CURSOR); err != nil {
 		return err
 	}
 	if err := s.ansiCommand(ansi.EXIT_ALTERNATE_SCREEN); err != nil {
 		return err
 	}
+	if err := s.device.RestoreInitialMode(); err != nil {
+		return err
+	}
 	return nil
+}
+
+func (s *Session) startEventLoop() (chan Event, error) {
+	resizeCh := make(chan resize.Event)
+	resizeListener := resize.NewListener(s.ctx, resizeCh, &s.device)
+	keyCh := make(chan input.Event)
+	keyListener, err := input.NewListener(s.ctx, s.in, input.NewInputParser(), keyCh)
+	if err != nil {
+		return nil, err
+	}
+	outCh := make(chan Event)
+	go func() {
+		defer close(outCh)
+		for {
+			select {
+			case <-s.ctx.Done():
+				return
+			case event, ok := <-resizeCh:
+				if !ok {
+					return
+				}
+				select {
+				case <-s.ctx.Done():
+					return
+				case outCh <- Event{
+					Type:   EventResize,
+					Resize: event,
+				}:
+				}
+			case event, ok := <-keyCh:
+				if !ok {
+					return
+				}
+				select {
+				case <-s.ctx.Done():
+					return
+				case outCh <- Event{
+					Type: EventKey,
+					Key:  event,
+				}:
+				}
+			}
+		}
+	}()
+	go func() {
+		// ToDo: handle error
+		_ = resizeListener.Listen()
+	}()
+	go func() {
+		// ToDo: handle error
+		_ = keyListener.Listen()
+	}()
+	return outCh, nil
+}
+
+func (s *Session) Close() error {
+	return s.restoreTerminal()
 }
 
 func (s *Session) ansiCommand(command ansi.ANSIEscapeSequence) error {

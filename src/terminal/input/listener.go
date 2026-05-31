@@ -147,6 +147,7 @@ func (i *Listener) stopTimer(t *time.Timer) {
 
 func (i *Listener) Close() error {
 	i.closeReaderOnce.Do(func() {
+		// TODO: avoid closing process stdin when stopping the input listener.
 		i.closeReaderErr = i.reader.Close()
 	})
 	return i.closeReaderErr
