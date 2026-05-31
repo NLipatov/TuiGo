@@ -50,7 +50,9 @@ func main() {
 				return
 			}
 		case terminal.EventResize:
-			if err := renderHello(&session, event.Resize.Width, event.Resize.Height); err != nil {
+			width = event.Resize.Width
+			height = event.Resize.Height
+			if err := renderHello(&session, width, height); err != nil {
 				panic(err)
 			}
 		case terminal.EventError:
@@ -88,10 +90,10 @@ func helloFrame(width, height int) (domain.Frame, error) {
 	}
 
 	logoX := max(0, (width-logoWidth())/2)
-	logoY := max(1, (height-logoHeight())/2-2)
+	logoY := max(3, (height-logoHeight())/2-1)
 	drawLogo(cells, width, height, logoX+1, logoY+1, colors.shadow)
 	drawLogo(cells, width, height, logoX, logoY, colors.logo)
-	drawText(cells, width, height, centeredX(width, "tuigo"), logoY+logoHeight()+2, "tuigo", colors.title, colors.bg)
+	drawText(cells, width, height, centeredX(width, helloTitle), logoY+logoHeight()+2, helloTitle, colors.title, colors.bg)
 	drawText(cells, width, height, centeredX(width, "Press q, Esc, or Ctrl+C to quit"), height-2, "Press q, Esc, or Ctrl+C to quit", colors.hint, colors.bg)
 
 	return domain.NewFrame(width, height, cells)
@@ -99,12 +101,11 @@ func helloFrame(width, height int) (domain.Frame, error) {
 
 func newPalette() palette {
 	bg := mustColor(ansi.BG_BLACK)
-	ink := mustColor(ansi.FG_BLACK)
 	return palette{
 		blank:  domain.NewCell(' ', mustColor(ansi.FG_WHITE), bg),
-		logo:   domain.NewCell(' ', ink, mustColor(ansi.BG_CYAN)),
-		shadow: domain.NewCell(' ', ink, mustColor(ansi.BG_BLUE)),
-		title:  mustColor(ansi.FG_BOLD_WHITE),
+		logo:   domain.NewCell('=', mustColor(ansi.FG_BOLD_GREEN), bg),
+		shadow: domain.NewCell('.', mustColor(ansi.FG_HIGH_INTENSITY_BLACK), bg),
+		title:  mustColor(ansi.FG_GREEN),
 		hint:   mustColor(ansi.FG_HIGH_INTENSITY_BLACK),
 		bg:     bg,
 	}
@@ -173,3 +174,5 @@ var helloLogo = []string{
 	"##  ## ##     ##     ##     ##  ##",
 	"##  ## ###### ###### ######  ####",
 }
+
+const helloTitle = "tuigo"
