@@ -60,9 +60,6 @@ func (r *Renderer) renderFrame() error {
 			return err
 		}
 	}
-	if len(r.out) > 0 {
-		r.out = append(r.out, ansi.RESET...)
-	}
 	if err := r.flush(); err != nil {
 		r.fullRepaint = true
 		return err
@@ -80,6 +77,14 @@ func (r *Renderer) ensureOutCapacity() {
 }
 
 func (r *Renderer) renderFullFrame() error {
+	cell, err := r.frame.CellAt(0, 0)
+	if err != nil {
+		return err
+	}
+	r.renderStyle(cell)
+	r.out = append(r.out, ansi.CLEAR_SCREEN...)
+	r.out = append(r.out, ansi.CURSOR_HOME...)
+
 	for y := range r.frame.Height() {
 		cells, err := r.frame.RowAt(y)
 		if err != nil {
@@ -136,11 +141,12 @@ func (r *Renderer) cursorMove(x, y int) {
 }
 
 func (r *Renderer) renderStyle(cell domain.Cell) {
-	if !r.style.set || r.style.fg != cell.Foreground() {
+	fgChanged := !r.style.set || r.style.fg != cell.Foreground()
+	if fgChanged {
 		r.out = append(r.out, cell.Foreground().String()...)
 		r.style.fg = cell.Foreground()
 	}
-	if !r.style.set || r.style.bg != cell.Background() {
+	if !r.style.set || fgChanged || r.style.bg != cell.Background() {
 		r.out = append(r.out, cell.Background().String()...)
 		r.style.bg = cell.Background()
 	}
