@@ -24,9 +24,9 @@ func TestRendererRenderWritesCell(t *testing.T) {
 	}
 
 	var out bytes.Buffer
-	renderer := NewRenderer(frame, &out)
+	renderer := NewRenderer(&out)
 
-	if err := renderer.Render(); err != nil {
+	if err := renderer.Render(frame); err != nil {
 		t.Fatalf("Render() error = %v", err)
 	}
 
@@ -52,13 +52,13 @@ func TestRendererRenderWritesNothingWhenFrameIsUnchanged(t *testing.T) {
 	}
 
 	var out bytes.Buffer
-	renderer := NewRenderer(frame, &out)
-	if err := renderer.Render(); err != nil {
+	renderer := NewRenderer(&out)
+	if err := renderer.Render(frame); err != nil {
 		t.Fatalf("Render() error = %v", err)
 	}
 
 	out.Reset()
-	if err := renderer.Render(); err != nil {
+	if err := renderer.Render(frame); err != nil {
 		t.Fatalf("Render() error = %v", err)
 	}
 	if got := out.String(); got != "" {
@@ -92,16 +92,13 @@ func TestRendererRenderWritesOnlyChangedCell(t *testing.T) {
 	}
 
 	var out bytes.Buffer
-	renderer := NewRenderer(firstFrame, &out)
-	if err := renderer.Render(); err != nil {
+	renderer := NewRenderer(&out)
+	if err := renderer.Render(firstFrame); err != nil {
 		t.Fatalf("Render() error = %v", err)
 	}
 
 	out.Reset()
-	if err := renderer.NextFrame(nextFrame); err != nil {
-		t.Fatalf("NextFrame() error = %v", err)
-	}
-	if err := renderer.Render(); err != nil {
+	if err := renderer.Render(nextFrame); err != nil {
 		t.Fatalf("Render() error = %v", err)
 	}
 
@@ -135,16 +132,13 @@ func TestRendererRenderWritesCellWhenOnlyStyleChanges(t *testing.T) {
 	}
 
 	var out bytes.Buffer
-	renderer := NewRenderer(firstFrame, &out)
-	if err := renderer.Render(); err != nil {
+	renderer := NewRenderer(&out)
+	if err := renderer.Render(firstFrame); err != nil {
 		t.Fatalf("Render() error = %v", err)
 	}
 
 	out.Reset()
-	if err := renderer.NextFrame(nextFrame); err != nil {
-		t.Fatalf("NextFrame() error = %v", err)
-	}
-	if err := renderer.Render(); err != nil {
+	if err := renderer.Render(nextFrame); err != nil {
 		t.Fatalf("Render() error = %v", err)
 	}
 
@@ -187,16 +181,13 @@ func TestRendererRenderWritesAdjacentChangedCellsAsSingleRun(t *testing.T) {
 	}
 
 	var out bytes.Buffer
-	renderer := NewRenderer(firstFrame, &out)
-	if err := renderer.Render(); err != nil {
+	renderer := NewRenderer(&out)
+	if err := renderer.Render(firstFrame); err != nil {
 		t.Fatalf("Render() error = %v", err)
 	}
 
 	out.Reset()
-	if err := renderer.NextFrame(nextFrame); err != nil {
-		t.Fatalf("NextFrame() error = %v", err)
-	}
-	if err := renderer.Render(); err != nil {
+	if err := renderer.Render(nextFrame); err != nil {
 		t.Fatalf("Render() error = %v", err)
 	}
 
@@ -239,16 +230,13 @@ func TestRendererRenderWritesSeparatedChangedCellsAsSeparateRuns(t *testing.T) {
 	}
 
 	var out bytes.Buffer
-	renderer := NewRenderer(firstFrame, &out)
-	if err := renderer.Render(); err != nil {
+	renderer := NewRenderer(&out)
+	if err := renderer.Render(firstFrame); err != nil {
 		t.Fatalf("Render() error = %v", err)
 	}
 
 	out.Reset()
-	if err := renderer.NextFrame(nextFrame); err != nil {
-		t.Fatalf("NextFrame() error = %v", err)
-	}
-	if err := renderer.Render(); err != nil {
+	if err := renderer.Render(nextFrame); err != nil {
 		t.Fatalf("Render() error = %v", err)
 	}
 
@@ -281,16 +269,13 @@ func TestRendererRenderWritesFullFrameAfterResize(t *testing.T) {
 	}
 
 	var out bytes.Buffer
-	renderer := NewRenderer(firstFrame, &out)
-	if err := renderer.Render(); err != nil {
+	renderer := NewRenderer(&out)
+	if err := renderer.Render(firstFrame); err != nil {
 		t.Fatalf("Render() error = %v", err)
 	}
 
 	out.Reset()
-	if err := renderer.NextFrame(nextFrame); err != nil {
-		t.Fatalf("NextFrame() error = %v", err)
-	}
-	if err := renderer.Render(); err != nil {
+	if err := renderer.Render(nextFrame); err != nil {
 		t.Fatalf("Render() error = %v", err)
 	}
 
@@ -317,13 +302,13 @@ func TestRendererRenderRetriesFullFrameAfterWriteError(t *testing.T) {
 
 	writeErr := errors.New("write failed")
 	writer := failOnceWriter{err: writeErr}
-	renderer := NewRenderer(frame, &writer)
+	renderer := NewRenderer(&writer)
 
-	if err := renderer.Render(); !errors.Is(err, writeErr) {
+	if err := renderer.Render(frame); !errors.Is(err, writeErr) {
 		t.Fatalf("Render() error = %v, want %v", err, writeErr)
 	}
 
-	if err := renderer.Render(); err != nil {
+	if err := renderer.Render(frame); err != nil {
 		t.Fatalf("Render() error = %v", err)
 	}
 
@@ -348,13 +333,13 @@ func TestRendererRenderDoesNotAllocateWhenFrameIsUnchanged(t *testing.T) {
 		t.Fatalf("domain.NewFrame() error = %v", err)
 	}
 
-	renderer := NewRenderer(frame, discardWriter{})
-	if err := renderer.Render(); err != nil {
+	renderer := NewRenderer(discardWriter{})
+	if err := renderer.Render(frame); err != nil {
 		t.Fatalf("Render() error = %v", err)
 	}
 
 	allocs := testing.AllocsPerRun(1000, func() {
-		_ = renderer.Render()
+		_ = renderer.Render(frame)
 	})
 	if allocs != 0 {
 		t.Fatalf("allocations per render = %.2f, want 0", allocs)
@@ -376,10 +361,13 @@ func TestRendererRenderDoesNotAllocateWhenRenderingFullFrame(t *testing.T) {
 		t.Fatalf("domain.NewFrame() error = %v", err)
 	}
 
-	renderer := NewRenderer(frame, discardWriter{})
+	renderer := NewRenderer(discardWriter{})
+	if err := renderer.Render(frame); err != nil {
+		t.Fatalf("Render() error = %v", err)
+	}
 	allocs := testing.AllocsPerRun(1000, func() {
 		renderer.fullRepaint = true
-		_ = renderer.Render()
+		_ = renderer.Render(frame)
 	})
 	if allocs != 0 {
 		t.Fatalf("allocations per full render = %.2f, want 0", allocs)
@@ -405,16 +393,14 @@ func TestRendererRenderDoesNotAllocateWhenRenderingChangedCell(t *testing.T) {
 		t.Fatalf("domain.NewFrame() error = %v", err)
 	}
 
-	renderer := NewRenderer(firstFrame, discardWriter{})
-	if err := renderer.Render(); err != nil {
+	renderer := NewRenderer(discardWriter{})
+	if err := renderer.Render(firstFrame); err != nil {
 		t.Fatalf("Render() error = %v", err)
 	}
 
 	allocs := testing.AllocsPerRun(1000, func() {
-		_ = renderer.NextFrame(nextFrame)
-		_ = renderer.Render()
-		_ = renderer.NextFrame(firstFrame)
-		_ = renderer.Render()
+		_ = renderer.Render(nextFrame)
+		_ = renderer.Render(firstFrame)
 	})
 	if allocs != 0 {
 		t.Fatalf("allocations per changed-cell render = %.2f, want 0", allocs)
@@ -423,14 +409,14 @@ func TestRendererRenderDoesNotAllocateWhenRenderingChangedCell(t *testing.T) {
 
 func BenchmarkRendererRenderUnchangedFrame(b *testing.B) {
 	frame := benchmarkFrame(b, 80, 24, 'x')
-	renderer := NewRenderer(frame, discardWriter{})
-	if err := renderer.Render(); err != nil {
+	renderer := NewRenderer(discardWriter{})
+	if err := renderer.Render(frame); err != nil {
 		b.Fatalf("Render() error = %v", err)
 	}
 
 	b.ReportAllocs()
 	for b.Loop() {
-		if err := renderer.Render(); err != nil {
+		if err := renderer.Render(frame); err != nil {
 			b.Fatalf("Render() error = %v", err)
 		}
 	}
@@ -438,12 +424,15 @@ func BenchmarkRendererRenderUnchangedFrame(b *testing.B) {
 
 func BenchmarkRendererRenderFullFrame(b *testing.B) {
 	frame := benchmarkFrame(b, 80, 24, 'x')
-	renderer := NewRenderer(frame, discardWriter{})
+	renderer := NewRenderer(discardWriter{})
+	if err := renderer.Render(frame); err != nil {
+		b.Fatalf("Render() error = %v", err)
+	}
 
 	b.ReportAllocs()
 	for b.Loop() {
 		renderer.fullRepaint = true
-		if err := renderer.Render(); err != nil {
+		if err := renderer.Render(frame); err != nil {
 			b.Fatalf("Render() error = %v", err)
 		}
 	}
@@ -453,23 +442,17 @@ func BenchmarkRendererRenderChangedCell(b *testing.B) {
 	firstFrame := benchmarkFrame(b, 80, 24, 'x')
 	nextFrame := benchmarkFrameWithLastCell(b, 80, 24, 'x', 'y')
 
-	renderer := NewRenderer(firstFrame, discardWriter{})
-	if err := renderer.Render(); err != nil {
+	renderer := NewRenderer(discardWriter{})
+	if err := renderer.Render(firstFrame); err != nil {
 		b.Fatalf("Render() error = %v", err)
 	}
 
 	b.ReportAllocs()
 	for b.Loop() {
-		if err := renderer.NextFrame(nextFrame); err != nil {
-			b.Fatalf("NextFrame() error = %v", err)
-		}
-		if err := renderer.Render(); err != nil {
+		if err := renderer.Render(nextFrame); err != nil {
 			b.Fatalf("Render() error = %v", err)
 		}
-		if err := renderer.NextFrame(firstFrame); err != nil {
-			b.Fatalf("NextFrame() error = %v", err)
-		}
-		if err := renderer.Render(); err != nil {
+		if err := renderer.Render(firstFrame); err != nil {
 			b.Fatalf("Render() error = %v", err)
 		}
 	}
@@ -479,23 +462,17 @@ func BenchmarkRendererRenderChangedRun(b *testing.B) {
 	firstFrame := benchmarkFrame(b, 80, 24, 'x')
 	nextFrame := benchmarkFrameWithRun(b, 80, 24, 'x', 'y', 1860, 40)
 
-	renderer := NewRenderer(firstFrame, discardWriter{})
-	if err := renderer.Render(); err != nil {
+	renderer := NewRenderer(discardWriter{})
+	if err := renderer.Render(firstFrame); err != nil {
 		b.Fatalf("Render() error = %v", err)
 	}
 
 	b.ReportAllocs()
 	for b.Loop() {
-		if err := renderer.NextFrame(nextFrame); err != nil {
-			b.Fatalf("NextFrame() error = %v", err)
-		}
-		if err := renderer.Render(); err != nil {
+		if err := renderer.Render(nextFrame); err != nil {
 			b.Fatalf("Render() error = %v", err)
 		}
-		if err := renderer.NextFrame(firstFrame); err != nil {
-			b.Fatalf("NextFrame() error = %v", err)
-		}
-		if err := renderer.Render(); err != nil {
+		if err := renderer.Render(firstFrame); err != nil {
 			b.Fatalf("Render() error = %v", err)
 		}
 	}

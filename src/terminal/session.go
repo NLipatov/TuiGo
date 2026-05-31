@@ -7,7 +7,9 @@ import (
 	"io"
 	"os"
 	"tuigo/ansi"
+	"tuigo/domain"
 	"tuigo/terminal/input"
+	"tuigo/terminal/render"
 	"tuigo/terminal/resize"
 )
 
@@ -17,34 +19,40 @@ var (
 	ErrNilOutput  = errors.New("terminal: nil output")
 )
 
-type Session struct {
-	ctx     context.Context
-	in      *os.File
-	out     io.Writer
-	device  Device
-	started bool
-	events  chan Event
-}
-
 type eventListener interface {
 	Listen() error
 }
 
-func NewSession(ctx context.Context, in *os.File, out io.Writer) (Session, error) {
+type renderer interface {
+	Render(frame domain.Frame) error
+}
+
+type Session struct {
+	ctx      context.Context
+	reader   *os.File
+	writer   io.Writer
+	device   Device
+	renderer renderer
+	started  bool
+	events   chan Event
+}
+
+func NewSession(ctx context.Context, reader *os.File, writer io.Writer) (Session, error) {
 	if ctx == nil {
 		return Session{}, ErrNilContext
 	}
-	if in == nil {
+	if reader == nil {
 		return Session{}, ErrNilInput
 	}
-	if out == nil {
+	if writer == nil {
 		return Session{}, ErrNilOutput
 	}
 	return Session{
-		ctx:    ctx,
-		in:     in,
-		out:    out,
-		device: NewDevice(int(in.Fd())),
+		ctx:      ctx,
+		reader:   reader,
+		writer:   writer,
+		device:   NewDevice(int(reader.Fd())),
+		renderer: render.NewRenderer(writer),
 	}, nil
 }
 
@@ -65,6 +73,14 @@ func (s *Session) Start() (<-chan Event, error) {
 	s.events = events
 	s.started = true
 	return s.events, nil
+}
+
+func (s *Session) Close() error {
+	return s.restoreTerminal()
+}
+
+func (s *Session) Render(frame domain.Frame) error {
+	return s.renderer.Render(frame)
 }
 
 func (s *Session) setupTerminal() error {
@@ -99,11 +115,20 @@ func (s *Session) restoreTerminal() error {
 	return nil
 }
 
+func (s *Session) ansiCommand(command ansi.ANSIEscapeSequence) error {
+	if writer, ok := s.writer.(io.StringWriter); ok {
+		_, err := writer.WriteString(string(command))
+		return err
+	}
+	_, err := s.writer.Write([]byte(command))
+	return err
+}
+
 func (s *Session) startEventLoop() (chan Event, error) {
 	resizeCh := make(chan resize.Event)
 	resizeListener := resize.NewListener(s.ctx, resizeCh, &s.device)
 	keyCh := make(chan input.Event)
-	keyListener, err := input.NewListener(s.ctx, s.in, input.NewInputParser(), keyCh)
+	keyListener, err := input.NewListener(s.ctx, s.reader, input.NewInputParser(), keyCh)
 	if err != nil {
 		return nil, err
 	}
@@ -188,17 +213,4 @@ func (s *Session) runEventLoop(
 		}
 	}()
 	return outCh
-}
-
-func (s *Session) Close() error {
-	return s.restoreTerminal()
-}
-
-func (s *Session) ansiCommand(command ansi.ANSIEscapeSequence) error {
-	if writer, ok := s.out.(io.StringWriter); ok {
-		_, err := writer.WriteString(string(command))
-		return err
-	}
-	_, err := s.out.Write([]byte(command))
-	return err
 }

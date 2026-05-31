@@ -1,13 +1,52 @@
 package terminal
 
 import (
+	"bytes"
 	"context"
 	"errors"
+	"os"
 	"testing"
 	"time"
+	"tuigo/ansi"
+	"tuigo/domain"
 	"tuigo/terminal/input"
 	"tuigo/terminal/resize"
 )
+
+func TestNewSessionWiresRendererToSessionOutput(t *testing.T) {
+	in, closeIn, err := os.Pipe()
+	if err != nil {
+		t.Fatalf("os.Pipe() error = %v", err)
+	}
+	defer in.Close()
+	defer closeIn.Close()
+
+	var out bytes.Buffer
+	session, err := NewSession(context.Background(), in, &out)
+	if err != nil {
+		t.Fatalf("NewSession() error = %v", err)
+	}
+
+	fg, err := ansi.NewColor(ansi.FG_RED)
+	if err != nil {
+		t.Fatalf("NewColor(%q) error = %v", ansi.FG_RED, err)
+	}
+	bg, err := ansi.NewColor(ansi.BG_BLACK)
+	if err != nil {
+		t.Fatalf("NewColor(%q) error = %v", ansi.BG_BLACK, err)
+	}
+	frame, err := domain.NewFrame(1, 1, []domain.Cell{domain.NewCell('x', fg, bg)})
+	if err != nil {
+		t.Fatalf("domain.NewFrame() error = %v", err)
+	}
+
+	if err := session.Render(frame); err != nil {
+		t.Fatalf("Render() error = %v", err)
+	}
+	if !bytes.Contains(out.Bytes(), []byte("x")) {
+		t.Fatalf("session output = %q, want rendered frame", out.String())
+	}
+}
 
 func TestSessionEventLoopForwardsInputAndResizeEvents(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())

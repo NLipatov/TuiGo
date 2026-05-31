@@ -24,28 +24,31 @@ type Renderer struct {
 	style           renderStyle
 }
 
-func NewRenderer(frame domain.Frame, writer io.Writer) Renderer {
-	return Renderer{
-		frame:       frame,
+func NewRenderer(writer io.Writer) *Renderer {
+	return &Renderer{
 		fullRepaint: true,
 		writer:      writer,
-		out:         make([]byte, 0, frame.Height()*frame.Width()*estimatedCellBytes),
 	}
 }
 
-func (r *Renderer) NextFrame(newFrame domain.Frame) error {
-	if newFrame.Width() != r.frame.Width() ||
-		newFrame.Height() != r.frame.Height() {
-		r.frame = newFrame
+func (r *Renderer) Render(frame domain.Frame) error {
+	r.advanceFrame(frame)
+	return r.renderFrame()
+}
+
+func (r *Renderer) advanceFrame(frame domain.Frame) {
+	if frame.Width() != r.frame.Width() ||
+		frame.Height() != r.frame.Height() {
+		r.frame = frame
 		r.fullRepaint = true
-		return nil
+		return
 	}
 	r.oldFrame = r.frame
-	r.frame = newFrame
-	return nil
+	r.frame = frame
 }
 
-func (r *Renderer) Render() error {
+func (r *Renderer) renderFrame() error {
+	r.ensureOutCapacity()
 	r.style.set = false
 	r.out = r.out[:0]
 	if r.fullRepaint {
@@ -67,6 +70,13 @@ func (r *Renderer) Render() error {
 	r.fullRepaint = false
 	r.oldFrame = r.frame
 	return nil
+}
+
+func (r *Renderer) ensureOutCapacity() {
+	need := r.frame.Height() * r.frame.Width() * estimatedCellBytes
+	if cap(r.out) < need {
+		r.out = make([]byte, 0, need)
+	}
 }
 
 func (r *Renderer) renderFullFrame() error {
