@@ -11,11 +11,11 @@ import (
 const inputTimeout = time.Millisecond * 50
 
 var (
-	ErrNilContext     = errors.New("terminal: nil context")
-	ErrNilReader      = errors.New("terminal: nil input reader")
-	ErrNilParser      = errors.New("terminal: nil input parser")
-	ErrNilEventChan   = errors.New("terminal: nil input event channel")
-	ErrReadChanClosed = errors.New("terminal: input read channel closed")
+	ErrNilContext     = errors.New("terminal/input: nil context")
+	ErrNilReader      = errors.New("terminal/input: nil reader")
+	ErrNilParser      = errors.New("terminal/input: nil parser")
+	ErrNilEventChan   = errors.New("terminal/input: nil event channel")
+	ErrReadChanClosed = errors.New("terminal/input: read channel closed")
 )
 
 type ParseResult struct {

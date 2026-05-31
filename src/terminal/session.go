@@ -12,9 +12,9 @@ import (
 )
 
 var (
-	ErrNilContext = errors.New("nil context")
-	ErrNilInput   = errors.New("nil input")
-	ErrNilOutput  = errors.New("nil output")
+	ErrNilContext = errors.New("terminal: nil context")
+	ErrNilInput   = errors.New("terminal: nil input")
+	ErrNilOutput  = errors.New("terminal: nil output")
 )
 
 type Session struct {
