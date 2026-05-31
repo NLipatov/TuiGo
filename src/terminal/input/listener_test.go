@@ -68,18 +68,6 @@ func TestNewInputListenerRejectsNilDependencies(t *testing.T) {
 	}
 }
 
-func TestNewInputListenerAcceptsValidDependencies(t *testing.T) {
-	_, err := NewListener(
-		context.Background(),
-		&scriptedReadCloser{},
-		&recordingParser{},
-		make(chan Event),
-	)
-	if err != nil {
-		t.Fatalf("NewInputListener() error = %v", err)
-	}
-}
-
 func TestInputListenerListenFeedsParserAndEmitsEvents(t *testing.T) {
 	readErr := errors.New("read failed")
 	reader := &scriptedReadCloser{
@@ -137,6 +125,48 @@ func TestInputListenerListenFeedsParserAndEmitsEvents(t *testing.T) {
 	case got := <-out:
 		t.Fatalf("unexpected extra event: %#v", got)
 	default:
+	}
+}
+
+func TestInputListenerListenRunsParserTimeoutWhenRequested(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	reader := newBlockingAfterReadsReadCloser([][]byte{[]byte("\x1b")})
+	parser := &recordingParser{
+		needsTimeout:  true,
+		timeoutEvents: []Event{{Code: KeyEsc}},
+	}
+	out := make(chan Event, 1)
+	input, err := NewListener(ctx, reader, parser, out)
+	if err != nil {
+		t.Fatalf("NewInputListener() error = %v", err)
+	}
+
+	errCh := make(chan error, 1)
+	go func() {
+		errCh <- input.Listen()
+	}()
+
+	got := receiveInputEvent(t, out)
+	if want := (Event{Code: KeyEsc}); got != want {
+		t.Fatalf("event = %#v, want %#v", got, want)
+	}
+	if len(parser.feeds) != 1 || string(parser.feeds[0]) != "\x1b" {
+		t.Fatalf("parser feeds = %q, want ESC feed", parser.feeds)
+	}
+	if parser.timeouts != 1 {
+		t.Fatalf("parser timeouts = %d, want 1", parser.timeouts)
+	}
+
+	cancel()
+	select {
+	case err := <-errCh:
+		if !errors.Is(err, context.Canceled) {
+			t.Fatalf("Listen() error = %v, want %v", err, context.Canceled)
+		}
+	case <-time.After(time.Second):
+		t.Fatal("timed out waiting for Listen to return")
 	}
 }
 
@@ -226,20 +256,27 @@ func TestInputListenerCloseIsIdempotent(t *testing.T) {
 }
 
 type recordingParser struct {
-	feeds  [][]byte
-	events func([]byte) []Event
+	feeds         [][]byte
+	events        func([]byte) []Event
+	needsTimeout  bool
+	timeoutEvents []Event
+	timeouts      int
 }
 
 func (p *recordingParser) Feed(buf []byte) ParseResult {
 	p.feeds = append(p.feeds, append([]byte(nil), buf...))
 	if p.events == nil {
-		return ParseResult{}
+		return ParseResult{NeedsTimeout: p.needsTimeout}
 	}
-	return ParseResult{Events: p.events(buf)}
+	return ParseResult{
+		Events:       p.events(buf),
+		NeedsTimeout: p.needsTimeout,
+	}
 }
 
 func (p *recordingParser) Timeout() ParseResult {
-	return ParseResult{}
+	p.timeouts++
+	return ParseResult{Events: p.timeoutEvents}
 }
 
 type scriptedReadCloser struct {
@@ -292,4 +329,45 @@ func (r *blockingReadCloser) Close() error {
 		close(r.closed)
 	})
 	return nil
+}
+
+type blockingAfterReadsReadCloser struct {
+	reads     [][]byte
+	closed    chan struct{}
+	closeOnce sync.Once
+}
+
+func newBlockingAfterReadsReadCloser(reads [][]byte) *blockingAfterReadsReadCloser {
+	return &blockingAfterReadsReadCloser{
+		reads:  reads,
+		closed: make(chan struct{}),
+	}
+}
+
+func (r *blockingAfterReadsReadCloser) Read(p []byte) (int, error) {
+	if len(r.reads) > 0 {
+		n := copy(p, r.reads[0])
+		r.reads = r.reads[1:]
+		return n, nil
+	}
+	<-r.closed
+	return 0, errors.New("reader closed")
+}
+
+func (r *blockingAfterReadsReadCloser) Close() error {
+	r.closeOnce.Do(func() {
+		close(r.closed)
+	})
+	return nil
+}
+
+func receiveInputEvent(t *testing.T, events <-chan Event) Event {
+	t.Helper()
+	select {
+	case event := <-events:
+		return event
+	case <-time.After(time.Second):
+		t.Fatal("timed out waiting for input event")
+		return Event{}
+	}
 }

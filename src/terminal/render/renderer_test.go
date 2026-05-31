@@ -111,6 +111,49 @@ func TestRendererRenderWritesOnlyChangedCell(t *testing.T) {
 	}
 }
 
+func TestRendererRenderWritesCellWhenOnlyStyleChanges(t *testing.T) {
+	red, err := ansi.NewColor(ansi.FG_RED)
+	if err != nil {
+		t.Fatalf("NewColor(%q) error = %v", ansi.FG_RED, err)
+	}
+	green, err := ansi.NewColor(ansi.FG_GREEN)
+	if err != nil {
+		t.Fatalf("NewColor(%q) error = %v", ansi.FG_GREEN, err)
+	}
+	bg, err := ansi.NewColor(ansi.BG_BLACK)
+	if err != nil {
+		t.Fatalf("NewColor(%q) error = %v", ansi.BG_BLACK, err)
+	}
+
+	firstFrame, err := domain.NewFrame(1, 1, []domain.Cell{domain.NewCell('x', red, bg)})
+	if err != nil {
+		t.Fatalf("domain.NewFrame() error = %v", err)
+	}
+	nextFrame, err := domain.NewFrame(1, 1, []domain.Cell{domain.NewCell('x', green, bg)})
+	if err != nil {
+		t.Fatalf("domain.NewFrame() error = %v", err)
+	}
+
+	var out bytes.Buffer
+	renderer := NewRenderer(firstFrame, &out)
+	if err := renderer.Render(); err != nil {
+		t.Fatalf("Render() error = %v", err)
+	}
+
+	out.Reset()
+	if err := renderer.NextFrame(nextFrame); err != nil {
+		t.Fatalf("NextFrame() error = %v", err)
+	}
+	if err := renderer.Render(); err != nil {
+		t.Fatalf("Render() error = %v", err)
+	}
+
+	want := "\x1b[1;1H" + string(ansi.FG_GREEN) + string(ansi.BG_BLACK) + "x" + string(ansi.RESET)
+	if got := out.String(); got != want {
+		t.Fatalf("rendered output = %q, want %q", got, want)
+	}
+}
+
 func TestRendererRenderWritesAdjacentChangedCellsAsSingleRun(t *testing.T) {
 	fg, err := ansi.NewColor(ansi.FG_RED)
 	if err != nil {

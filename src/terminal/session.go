@@ -26,6 +26,10 @@ type Session struct {
 	events  chan Event
 }
 
+type eventListener interface {
+	Listen() error
+}
+
 func NewSession(ctx context.Context, in *os.File, out io.Writer) (Session, error) {
 	if ctx == nil {
 		return Session{}, ErrNilContext
@@ -103,6 +107,15 @@ func (s *Session) startEventLoop() (chan Event, error) {
 	if err != nil {
 		return nil, err
 	}
+	return s.runEventLoop(resizeCh, &resizeListener, keyCh, &keyListener), nil
+}
+
+func (s *Session) runEventLoop(
+	resizeCh <-chan resize.Event,
+	resizeListener eventListener,
+	keyCh <-chan input.Event,
+	keyListener eventListener,
+) chan Event {
 	outCh := make(chan Event)
 	errCh := make(chan error, 2)
 	go func() {
@@ -174,7 +187,7 @@ func (s *Session) startEventLoop() (chan Event, error) {
 			}
 		}
 	}()
-	return outCh, nil
+	return outCh
 }
 
 func (s *Session) Close() error {

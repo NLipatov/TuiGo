@@ -6,7 +6,7 @@ import (
 	"tuigo/ansi"
 )
 
-func TestNewFrame(t *testing.T) {
+func TestNewFrameExposesDimensionsAndCells(t *testing.T) {
 	tests := []struct {
 		name   string
 		width  int
@@ -27,19 +27,26 @@ func TestNewFrame(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			cells := make([]Cell, tt.width*tt.height)
+			for i := range cells {
+				cells[i] = testCellWithSymbol(t, rune('a'+i))
+			}
 			frame, err := NewFrame(tt.width, tt.height, cells)
 			if err != nil {
 				t.Fatalf("NewFrame() error = %v", err)
 			}
 
-			if frame.width != tt.width {
-				t.Fatalf("width = %d, want %d", frame.width, tt.width)
+			if frame.Width() != tt.width {
+				t.Fatalf("Width() = %d, want %d", frame.Width(), tt.width)
 			}
-			if frame.height != tt.height {
-				t.Fatalf("height = %d, want %d", frame.height, tt.height)
+			if frame.Height() != tt.height {
+				t.Fatalf("Height() = %d, want %d", frame.Height(), tt.height)
 			}
-			if len(frame.cells) != tt.width*tt.height {
-				t.Fatalf("len(cells) = %d, want %d", len(frame.cells), tt.width*tt.height)
+			got, err := frame.CellAt(tt.width-1, tt.height-1)
+			if err != nil {
+				t.Fatalf("CellAt() error = %v", err)
+			}
+			if want := cells[len(cells)-1]; got != want {
+				t.Fatalf("CellAt() = %#v, want %#v", got, want)
 			}
 		})
 	}
@@ -59,9 +66,21 @@ func TestNewFrameRejectsInvalidDimensions(t *testing.T) {
 			cells:  nil,
 		},
 		{
+			name:   "zero width",
+			width:  0,
+			height: 1,
+			cells:  nil,
+		},
+		{
 			name:   "negative height",
 			width:  1,
 			height: -1,
+			cells:  nil,
+		},
+		{
+			name:   "zero height",
+			width:  1,
+			height: 0,
 			cells:  nil,
 		},
 		{
@@ -259,7 +278,7 @@ func TestFrameRowAtRejectsOutOfBoundsRows(t *testing.T) {
 	}
 }
 
-func TestFrameAccessDoesNotAllocate(t *testing.T) {
+func TestFrameCellAtDoesNotAllocate(t *testing.T) {
 	frame := Frame{
 		width:  2,
 		height: 2,
@@ -279,7 +298,31 @@ func TestFrameAccessDoesNotAllocate(t *testing.T) {
 		_, _ = frame.CellAt(1, 1)
 	})
 	if allocs != 0 {
-		t.Fatalf("allocations per access = %.2f, want 0", allocs)
+		t.Fatalf("allocations per CellAt = %.2f, want 0", allocs)
+	}
+}
+
+func TestFrameRowAtDoesNotAllocate(t *testing.T) {
+	frame := Frame{
+		width:  2,
+		height: 2,
+		cells: []Cell{
+			testCell(t, ansi.FG_BLACK),
+			testCell(t, ansi.FG_RED),
+			testCell(t, ansi.FG_GREEN),
+			testCell(t, ansi.FG_BLUE),
+		},
+	}
+
+	if _, err := frame.RowAt(1); err != nil {
+		t.Fatalf("RowAt() error = %v", err)
+	}
+
+	allocs := testing.AllocsPerRun(1000, func() {
+		_, _ = frame.RowAt(1)
+	})
+	if allocs != 0 {
+		t.Fatalf("allocations per RowAt = %.2f, want 0", allocs)
 	}
 }
 
@@ -295,9 +338,20 @@ func testCell(t *testing.T, sequence ansi.ANSIEscapeSequence) Cell {
 		t.Fatalf("NewColor(%q) error = %v", ansi.BG_BLACK, err)
 	}
 
-	return NewCell(
-		'x',
-		fg,
-		bg,
-	)
+	return NewCell('x', fg, bg)
+}
+
+func testCellWithSymbol(t *testing.T, symbol rune) Cell {
+	t.Helper()
+
+	fg, err := ansi.NewColor(ansi.FG_RED)
+	if err != nil {
+		t.Fatalf("NewColor(%q) error = %v", ansi.FG_RED, err)
+	}
+	bg, err := ansi.NewColor(ansi.BG_BLACK)
+	if err != nil {
+		t.Fatalf("NewColor(%q) error = %v", ansi.BG_BLACK, err)
+	}
+
+	return NewCell(symbol, fg, bg)
 }

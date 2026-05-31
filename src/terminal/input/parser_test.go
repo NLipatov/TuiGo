@@ -89,9 +89,15 @@ func TestInputParserTimesOutPendingEsc(t *testing.T) {
 
 	got := parser.Feed([]byte("\x1b"))
 	assertEvents(t, got, nil)
+	if !got.NeedsTimeout {
+		t.Fatalf("NeedsTimeout = false, want true")
+	}
 
 	got = parser.Timeout()
 	assertEvents(t, got, []Event{{Code: KeyEsc}})
+	if got.NeedsTimeout {
+		t.Fatalf("NeedsTimeout = true, want false")
+	}
 }
 
 func TestInputParserParsesSplitEscapeSequence(t *testing.T) {
@@ -99,9 +105,15 @@ func TestInputParserParsesSplitEscapeSequence(t *testing.T) {
 
 	got := parser.Feed([]byte("\x1b"))
 	assertEvents(t, got, nil)
+	if !got.NeedsTimeout {
+		t.Fatalf("NeedsTimeout = false, want true")
+	}
 
 	got = parser.Feed([]byte("[A"))
 	assertEvents(t, got, []Event{{Code: KeyUp}})
+	if got.NeedsTimeout {
+		t.Fatalf("NeedsTimeout = true, want false")
+	}
 }
 
 func TestInputParserParsesEscapeSequencesBeforeFollowingInput(t *testing.T) {
@@ -120,9 +132,15 @@ func TestInputParserWaitsForIncompleteEscapeSequence(t *testing.T) {
 
 	got := parser.Feed([]byte("\x1b["))
 	assertEvents(t, got, nil)
+	if !got.NeedsTimeout {
+		t.Fatalf("NeedsTimeout = false, want true")
+	}
 
 	got = parser.Feed([]byte("A"))
 	assertEvents(t, got, []Event{{Code: KeyUp}})
+	if got.NeedsTimeout {
+		t.Fatalf("NeedsTimeout = true, want false")
+	}
 }
 
 func TestInputParserParsesAltRune(t *testing.T) {
@@ -137,9 +155,15 @@ func TestInputParserParsesAltRuneSplitAcrossFeeds(t *testing.T) {
 
 	got := parser.Feed([]byte("\x1b"))
 	assertEvents(t, got, nil)
+	if !got.NeedsTimeout {
+		t.Fatalf("NeedsTimeout = false, want true")
+	}
 
 	got = parser.Feed([]byte("x"))
 	assertEvents(t, got, []Event{{Code: KeyRune, Text: "x", Mod: ModAlt}})
+	if got.NeedsTimeout {
+		t.Fatalf("NeedsTimeout = true, want false")
+	}
 }
 
 func TestInputParserParsesCSIModifiers(t *testing.T) {
