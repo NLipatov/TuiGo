@@ -107,6 +107,9 @@ func (s *Session) setupTerminal() error {
 }
 
 func (s *Session) restoreTerminal() error {
+	if err := s.ansiCommand(ansi.RESET); err != nil {
+		return err
+	}
 	if err := s.ansiCommand(ansi.SHOW_CURSOR); err != nil {
 		return err
 	}
