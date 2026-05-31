@@ -8,6 +8,10 @@ import (
 	"tuigo/domain"
 )
 
+func fullRepaintPrefix(fg, bg ansi.Color) string {
+	return fg.String() + bg.String() + string(ansi.CLEAR_SCREEN) + string(ansi.CURSOR_HOME)
+}
+
 func TestRendererRenderWritesCell(t *testing.T) {
 	fg, err := ansi.NewColor(ansi.FG_RED)
 	if err != nil {
@@ -30,7 +34,7 @@ func TestRendererRenderWritesCell(t *testing.T) {
 		t.Fatalf("Render() error = %v", err)
 	}
 
-	want := "\x1b[1;1H" + string(ansi.FG_RED) + string(ansi.BG_BLACK) + "x" + string(ansi.RESET)
+	want := fullRepaintPrefix(fg, bg) + "\x1b[1;1H" + "x"
 	if got := out.String(); got != want {
 		t.Fatalf("rendered output = %q, want %q", got, want)
 	}
@@ -102,7 +106,7 @@ func TestRendererRenderWritesOnlyChangedCell(t *testing.T) {
 		t.Fatalf("Render() error = %v", err)
 	}
 
-	want := "\x1b[1;2H" + string(ansi.FG_RED) + string(ansi.BG_BLACK) + "z" + string(ansi.RESET)
+	want := "\x1b[1;2H" + string(ansi.FG_RED) + string(ansi.BG_BLACK) + "z"
 	if got := out.String(); got != want {
 		t.Fatalf("rendered output = %q, want %q", got, want)
 	}
@@ -142,7 +146,40 @@ func TestRendererRenderWritesCellWhenOnlyStyleChanges(t *testing.T) {
 		t.Fatalf("Render() error = %v", err)
 	}
 
-	want := "\x1b[1;1H" + string(ansi.FG_GREEN) + string(ansi.BG_BLACK) + "x" + string(ansi.RESET)
+	want := "\x1b[1;1H" + string(ansi.FG_GREEN) + string(ansi.BG_BLACK) + "x"
+	if got := out.String(); got != want {
+		t.Fatalf("rendered output = %q, want %q", got, want)
+	}
+}
+
+func TestRendererRenderReappliesBackgroundAfterForegroundReset(t *testing.T) {
+	title, err := ansi.NewColor(ansi.FG_BOLD_WHITE)
+	if err != nil {
+		t.Fatalf("NewColor(%q) error = %v", ansi.FG_BOLD_WHITE, err)
+	}
+	blank, err := ansi.NewColor(ansi.FG_WHITE)
+	if err != nil {
+		t.Fatalf("NewColor(%q) error = %v", ansi.FG_WHITE, err)
+	}
+	bg, err := ansi.NewColor(ansi.BG_BLACK)
+	if err != nil {
+		t.Fatalf("NewColor(%q) error = %v", ansi.BG_BLACK, err)
+	}
+	frame, err := domain.NewFrame(2, 1, []domain.Cell{
+		domain.NewCell('t', title, bg),
+		domain.NewCell(' ', blank, bg),
+	})
+	if err != nil {
+		t.Fatalf("domain.NewFrame() error = %v", err)
+	}
+
+	var out bytes.Buffer
+	renderer := NewRenderer(&out)
+	if err := renderer.Render(frame); err != nil {
+		t.Fatalf("Render() error = %v", err)
+	}
+
+	want := fullRepaintPrefix(title, bg) + "\x1b[1;1H" + "t" + string(ansi.FG_WHITE) + string(ansi.BG_BLACK) + " "
 	if got := out.String(); got != want {
 		t.Fatalf("rendered output = %q, want %q", got, want)
 	}
@@ -191,7 +228,7 @@ func TestRendererRenderWritesAdjacentChangedCellsAsSingleRun(t *testing.T) {
 		t.Fatalf("Render() error = %v", err)
 	}
 
-	want := "\x1b[1;2H" + string(ansi.FG_RED) + string(ansi.BG_BLACK) + "xy" + string(ansi.RESET)
+	want := "\x1b[1;2H" + string(ansi.FG_RED) + string(ansi.BG_BLACK) + "xy"
 	if got := out.String(); got != want {
 		t.Fatalf("rendered output = %q, want %q", got, want)
 	}
@@ -240,7 +277,7 @@ func TestRendererRenderWritesSeparatedChangedCellsAsSeparateRuns(t *testing.T) {
 		t.Fatalf("Render() error = %v", err)
 	}
 
-	want := "\x1b[1;2H" + string(ansi.FG_RED) + string(ansi.BG_BLACK) + "x" + "\x1b[1;4H" + "y" + string(ansi.RESET)
+	want := "\x1b[1;2H" + string(ansi.FG_RED) + string(ansi.BG_BLACK) + "x" + "\x1b[1;4H" + "y"
 	if got := out.String(); got != want {
 		t.Fatalf("rendered output = %q, want %q", got, want)
 	}
@@ -279,7 +316,7 @@ func TestRendererRenderWritesFullFrameAfterResize(t *testing.T) {
 		t.Fatalf("Render() error = %v", err)
 	}
 
-	want := "\x1b[1;1H" + string(ansi.FG_RED) + string(ansi.BG_BLACK) + "yz" + string(ansi.RESET)
+	want := fullRepaintPrefix(fg, bg) + "\x1b[1;1H" + "yz"
 	if got := out.String(); got != want {
 		t.Fatalf("rendered output = %q, want %q", got, want)
 	}
@@ -312,7 +349,7 @@ func TestRendererRenderRetriesFullFrameAfterWriteError(t *testing.T) {
 		t.Fatalf("Render() error = %v", err)
 	}
 
-	want := "\x1b[1;1H" + string(ansi.FG_RED) + string(ansi.BG_BLACK) + "x" + string(ansi.RESET)
+	want := fullRepaintPrefix(fg, bg) + "\x1b[1;1H" + "x"
 	if got := writer.out.String(); got != want {
 		t.Fatalf("rendered output = %q, want %q", got, want)
 	}
