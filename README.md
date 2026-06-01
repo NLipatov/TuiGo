@@ -60,12 +60,23 @@ color.
 
 ## Frame buffers
 
-Applications should reuse frame cell buffers between redraws. Allocate a
-`[]core.Cell` when the terminal size changes, mutate it to build the next frame,
-wrap it with `core.NewFrame`, then call `Render`.
+To improve rendering performance, use two preallocated frame buffers: the
+current frame and the next frame. Allocate both `[]core.Cell` buffers when the
+terminal size changes, mutate the next buffer, wrap it with `core.NewFrame`, and
+call `Render`. After a successful render, swap the current and next buffers. Do
+not mutate the buffer from the last successful `Render` call until another
+buffer has been rendered successfully.
 
-Terminal resize should be the only reason to allocate or replace the backing
-cell buffer. Normal redraws should mutate cells in the existing buffer.
+```go
+current, next := make([]core.Cell, width*height), make([]core.Cell, width*height)
 
-`Render` is synchronous. After it returns, the buffer can be reused for the next
-frame.
+draw(next, width, height, state)
+frame, err := core.NewFrame(width, height, next)
+if err != nil {
+	return err
+}
+if err := session.Render(frame); err != nil {
+	return err
+}
+current, next = next, current
+```
