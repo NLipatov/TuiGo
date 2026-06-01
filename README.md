@@ -2,6 +2,8 @@
 
 Frame-based terminal UI runtime for Go.
 
+tuigo is pre-v1.0. Public APIs may change between minor releases.
+
 ## Demo
 
 From the repository root:
