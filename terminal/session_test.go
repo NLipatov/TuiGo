@@ -7,10 +7,11 @@ import (
 	"os"
 	"testing"
 	"time"
-	"tuigo/ansi"
-	"tuigo/core"
-	"tuigo/terminal/input"
-	"tuigo/terminal/resize"
+
+	"github.com/NLipatov/tuigo/ansi"
+	"github.com/NLipatov/tuigo/core"
+	"github.com/NLipatov/tuigo/terminal/input"
+	"github.com/NLipatov/tuigo/terminal/resize"
 )
 
 func TestNewSessionWiresRendererToSessionOutput(t *testing.T) {

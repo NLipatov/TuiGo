@@ -3,9 +3,10 @@ package render
 import (
 	"io"
 	"strconv"
-	"tuigo/ansi"
-	"tuigo/core"
 	"unicode/utf8"
+
+	"github.com/NLipatov/tuigo/ansi"
+	"github.com/NLipatov/tuigo/core"
 )
 
 const estimatedCellBytes = 36

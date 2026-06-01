@@ -4,8 +4,9 @@ import (
 	"bytes"
 	"strconv"
 	"strings"
-	"tuigo/ansi"
 	"unicode/utf8"
+
+	"github.com/NLipatov/tuigo/ansi"
 )
 
 var escapeSequences = []struct {

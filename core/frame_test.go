@@ -3,7 +3,8 @@ package core
 import (
 	"errors"
 	"testing"
-	"tuigo/ansi"
+
+	"github.com/NLipatov/tuigo/ansi"
 )
 
 func TestNewFrameExposesDimensionsAndCells(t *testing.T) {

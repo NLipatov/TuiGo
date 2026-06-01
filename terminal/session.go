@@ -6,11 +6,12 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"tuigo/ansi"
-	"tuigo/core"
-	"tuigo/terminal/input"
-	"tuigo/terminal/render"
-	"tuigo/terminal/resize"
+
+	"github.com/NLipatov/tuigo/ansi"
+	"github.com/NLipatov/tuigo/core"
+	"github.com/NLipatov/tuigo/terminal/input"
+	"github.com/NLipatov/tuigo/terminal/render"
+	"github.com/NLipatov/tuigo/terminal/resize"
 )
 
 var (

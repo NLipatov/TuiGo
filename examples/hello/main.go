@@ -4,10 +4,10 @@ import (
 	"context"
 	"os"
 
-	"tuigo/ansi"
-	"tuigo/core"
-	"tuigo/terminal"
-	"tuigo/terminal/input"
+	"github.com/NLipatov/tuigo/ansi"
+	"github.com/NLipatov/tuigo/core"
+	"github.com/NLipatov/tuigo/terminal"
+	"github.com/NLipatov/tuigo/terminal/input"
 )
 
 type palette struct {

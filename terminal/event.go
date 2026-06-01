@@ -1,8 +1,8 @@
 package terminal
 
 import (
-	"tuigo/terminal/input"
-	"tuigo/terminal/resize"
+	"github.com/NLipatov/tuigo/terminal/input"
+	"github.com/NLipatov/tuigo/terminal/resize"
 )
 
 type EventType int

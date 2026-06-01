@@ -1,4 +1,4 @@
-module tuigo
+module github.com/NLipatov/tuigo
 
 go 1.26.3
 

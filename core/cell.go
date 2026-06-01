@@ -1,6 +1,6 @@
 package core
 
-import "tuigo/ansi"
+import "github.com/NLipatov/tuigo/ansi"
 
 type Cell struct {
 	fg, bg ansi.Color

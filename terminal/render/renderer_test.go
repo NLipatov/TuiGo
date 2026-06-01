@@ -4,8 +4,9 @@ import (
 	"bytes"
 	"errors"
 	"testing"
-	"tuigo/ansi"
-	"tuigo/core"
+
+	"github.com/NLipatov/tuigo/ansi"
+	"github.com/NLipatov/tuigo/core"
 )
 
 func fullRepaintPrefix(fg, bg ansi.Color) string {
