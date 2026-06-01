@@ -4,7 +4,7 @@ import (
 	"io"
 	"strconv"
 	"tuigo/ansi"
-	"tuigo/domain"
+	"tuigo/core"
 	"unicode/utf8"
 )
 
@@ -16,7 +16,7 @@ type renderStyle struct {
 }
 
 type Renderer struct {
-	frame, oldFrame domain.Frame
+	frame, oldFrame core.Frame
 	fullRepaint     bool
 	writer          io.Writer
 	symbol          [utf8.UTFMax]byte
@@ -31,12 +31,12 @@ func NewRenderer(writer io.Writer) *Renderer {
 	}
 }
 
-func (r *Renderer) Render(frame domain.Frame) error {
+func (r *Renderer) Render(frame core.Frame) error {
 	r.advanceFrame(frame)
 	return r.renderFrame()
 }
 
-func (r *Renderer) advanceFrame(frame domain.Frame) {
+func (r *Renderer) advanceFrame(frame core.Frame) {
 	if frame.Width() != r.frame.Width() ||
 		frame.Height() != r.frame.Height() {
 		r.frame = frame
@@ -120,7 +120,7 @@ func (r *Renderer) renderDiffFrame() error {
 	return nil
 }
 
-func (r *Renderer) renderRow(x, y int, cells []domain.Cell) {
+func (r *Renderer) renderRow(x, y int, cells []core.Cell) {
 	r.cursorMove(x, y)
 	for _, cell := range cells {
 		r.renderStyle(cell)
@@ -140,7 +140,7 @@ func (r *Renderer) cursorMove(x, y int) {
 	r.out = append(r.out, 'H')
 }
 
-func (r *Renderer) renderStyle(cell domain.Cell) {
+func (r *Renderer) renderStyle(cell core.Cell) {
 	fgChanged := !r.style.set || r.style.fg != cell.Foreground()
 	if fgChanged {
 		r.out = append(r.out, cell.Foreground().String()...)

@@ -5,15 +5,15 @@ import (
 	"os"
 
 	"tuigo/ansi"
-	"tuigo/domain"
+	"tuigo/core"
 	"tuigo/terminal"
 	"tuigo/terminal/input"
 )
 
 type palette struct {
-	blank  domain.Cell
-	logo   domain.Cell
-	shadow domain.Cell
+	blank  core.Cell
+	logo   core.Cell
+	shadow core.Cell
 	title  ansi.Color
 	hint   ansi.Color
 	bg     ansi.Color
@@ -82,9 +82,9 @@ func renderHello(session *terminal.Session, width, height int) error {
 	return session.Render(frame)
 }
 
-func helloFrame(width, height int) (domain.Frame, error) {
+func helloFrame(width, height int) (core.Frame, error) {
 	colors := newPalette()
-	cells := make([]domain.Cell, width*height)
+	cells := make([]core.Cell, width*height)
 	for i := range cells {
 		cells[i] = colors.blank
 	}
@@ -96,22 +96,22 @@ func helloFrame(width, height int) (domain.Frame, error) {
 	drawText(cells, width, height, centeredX(width, helloTitle), logoY+logoHeight()+2, helloTitle, colors.title, colors.bg)
 	drawText(cells, width, height, centeredX(width, "Press q, Esc, or Ctrl+C to quit"), height-2, "Press q, Esc, or Ctrl+C to quit", colors.hint, colors.bg)
 
-	return domain.NewFrame(width, height, cells)
+	return core.NewFrame(width, height, cells)
 }
 
 func newPalette() palette {
 	bg := mustColor(ansi.BG_BLACK)
 	return palette{
-		blank:  domain.NewCell(' ', mustColor(ansi.FG_WHITE), bg),
-		logo:   domain.NewCell('=', mustColor(ansi.FG_BOLD_GREEN), bg),
-		shadow: domain.NewCell('.', mustColor(ansi.FG_HIGH_INTENSITY_BLACK), bg),
+		blank:  core.NewCell(' ', mustColor(ansi.FG_WHITE), bg),
+		logo:   core.NewCell('=', mustColor(ansi.FG_BOLD_GREEN), bg),
+		shadow: core.NewCell('.', mustColor(ansi.FG_HIGH_INTENSITY_BLACK), bg),
 		title:  mustColor(ansi.FG_GREEN),
 		hint:   mustColor(ansi.FG_HIGH_INTENSITY_BLACK),
 		bg:     bg,
 	}
 }
 
-func drawLogo(cells []domain.Cell, width, height, left, top int, cell domain.Cell) {
+func drawLogo(cells []core.Cell, width, height, left, top int, cell core.Cell) {
 	for y, row := range helloLogo {
 		for x, pixel := range row {
 			if pixel != ' ' {
@@ -121,13 +121,13 @@ func drawLogo(cells []domain.Cell, width, height, left, top int, cell domain.Cel
 	}
 }
 
-func drawText(cells []domain.Cell, width, height, left, y int, text string, fg, bg ansi.Color) {
+func drawText(cells []core.Cell, width, height, left, y int, text string, fg, bg ansi.Color) {
 	for x, char := range text {
-		putCell(cells, width, height, left+x, y, domain.NewCell(char, fg, bg))
+		putCell(cells, width, height, left+x, y, core.NewCell(char, fg, bg))
 	}
 }
 
-func putCell(cells []domain.Cell, width, height, x, y int, cell domain.Cell) {
+func putCell(cells []core.Cell, width, height, x, y int, cell core.Cell) {
 	if x < 0 || y < 0 || x >= width || y >= height {
 		return
 	}

@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 	"tuigo/ansi"
-	"tuigo/domain"
+	"tuigo/core"
 	"tuigo/terminal/input"
 	"tuigo/terminal/resize"
 )
@@ -35,9 +35,9 @@ func TestNewSessionWiresRendererToSessionOutput(t *testing.T) {
 	if err != nil {
 		t.Fatalf("NewColor(%q) error = %v", ansi.BG_BLACK, err)
 	}
-	frame, err := domain.NewFrame(1, 1, []domain.Cell{domain.NewCell('x', fg, bg)})
+	frame, err := core.NewFrame(1, 1, []core.Cell{core.NewCell('x', fg, bg)})
 	if err != nil {
-		t.Fatalf("domain.NewFrame() error = %v", err)
+		t.Fatalf("core.NewFrame() error = %v", err)
 	}
 
 	if err := session.Render(frame); err != nil {

@@ -38,6 +38,6 @@ for event := range events {
 }
 ```
 
-`domain.Frame` represents a width x height grid backed by a flat slice of
-`domain.Cell` values. Each cell has a rune, foreground color, and background
+`core.Frame` represents a width x height grid backed by a flat slice of
+`core.Cell` values. Each cell has a rune, foreground color, and background
 color.

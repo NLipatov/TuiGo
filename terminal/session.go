@@ -7,7 +7,7 @@ import (
 	"io"
 	"os"
 	"tuigo/ansi"
-	"tuigo/domain"
+	"tuigo/core"
 	"tuigo/terminal/input"
 	"tuigo/terminal/render"
 	"tuigo/terminal/resize"
@@ -24,7 +24,7 @@ type eventListener interface {
 }
 
 type renderer interface {
-	Render(frame domain.Frame) error
+	Render(frame core.Frame) error
 }
 
 type Session struct {
@@ -83,7 +83,7 @@ func (s *Session) Close() error {
 	return s.restoreTerminal()
 }
 
-func (s *Session) Render(frame domain.Frame) error {
+func (s *Session) Render(frame core.Frame) error {
 	return s.renderer.Render(frame)
 }
 
