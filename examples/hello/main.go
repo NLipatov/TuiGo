@@ -158,13 +158,6 @@ func mustColor(sequence ansi.ANSIEscapeSequence) ansi.Color {
 	return color
 }
 
-func max(a, b int) int {
-	if a > b {
-		return a
-	}
-	return b
-}
-
 var helloLogo = []string{
 	"##  ## ###### ##     ##      ####",
 	"##  ## ##     ##     ##     ##  ##",
