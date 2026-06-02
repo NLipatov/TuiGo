@@ -7,16 +7,16 @@ their UI architecture. It provides terminal setup, input and resize events, and
 buffered diff rendering. The application owns state, layout, widgets, and frame
 construction.
 
-tuigo is pre-v1.0. Public APIs may change between minor releases.
+Note: tuigo is pre-v1.0. Public APIs may change between minor releases.
 
 ## Why tuigo
 
-- no framework lifecycle or Elm-style architecture;
-- explicit `Frame -> Render` model;
-- direct event consumption;
-- application-owned state, layout, widgets, and redraw policy;
 - performance-oriented buffered diff rendering;
-- few dependencies.
+- explicit `Frame -> Render` model;
+- single dependency: `golang.org/x/term`;
+- no framework-managed lifecycle or state;
+- direct event consumption;
+- application-owned state, layout, widgets, and redraw policy.
 
 ## Demo
 
