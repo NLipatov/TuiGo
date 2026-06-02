@@ -10,15 +10,6 @@ import (
 	"github.com/NLipatov/tuigo/terminal/input"
 )
 
-type palette struct {
-	blank  core.Cell
-	logo   core.Cell
-	shadow core.Cell
-	title  ansi.Color
-	hint   ansi.Color
-	bg     ansi.Color
-}
-
 func main() {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -82,6 +73,18 @@ func renderHello(session *terminal.Session, width, height int) error {
 	return session.Render(frame)
 }
 
+var helloLogo = []string{
+	"##  ## ###### ##     ##      ####",
+	"##  ## ##     ##     ##     ##  ##",
+	"##  ## ##     ##     ##     ##  ##",
+	"###### #####  ##     ##     ##  ##",
+	"##  ## ##     ##     ##     ##  ##",
+	"##  ## ##     ##     ##     ##  ##",
+	"##  ## ###### ###### ######  ####",
+}
+
+const helloTitle = "tuigo"
+
 func helloFrame(width, height int) (core.Frame, error) {
 	colors := newPalette()
 	cells := make([]core.Cell, width*height)
@@ -97,6 +100,15 @@ func helloFrame(width, height int) (core.Frame, error) {
 	drawText(cells, width, height, centeredX(width, "Press q, Esc, or Ctrl+C to quit"), height-2, "Press q, Esc, or Ctrl+C to quit", colors.hint, colors.bg)
 
 	return core.NewFrame(width, height, cells)
+}
+
+type palette struct {
+	blank  core.Cell
+	logo   core.Cell
+	shadow core.Cell
+	title  ansi.Color
+	hint   ansi.Color
+	bg     ansi.Color
 }
 
 func newPalette() palette {
@@ -157,15 +169,3 @@ func mustColor(sequence ansi.ANSIEscapeSequence) ansi.Color {
 	}
 	return color
 }
-
-var helloLogo = []string{
-	"##  ## ###### ##     ##      ####",
-	"##  ## ##     ##     ##     ##  ##",
-	"##  ## ##     ##     ##     ##  ##",
-	"###### #####  ##     ##     ##  ##",
-	"##  ## ##     ##     ##     ##  ##",
-	"##  ## ##     ##     ##     ##  ##",
-	"##  ## ###### ###### ######  ####",
-}
-
-const helloTitle = "tuigo"
