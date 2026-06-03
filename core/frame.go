@@ -5,8 +5,8 @@ import (
 )
 
 var (
-	ErrInvalidFrameDimensions = errors.New("Invalid frame dimensions")
-	ErrOutOfFrameBounds       = errors.New("Out of frame bounds")
+	ErrInvalidFrameDimensions = errors.New("invalid frame dimensions")
+	ErrOutOfFrameBounds       = errors.New("out of frame bounds")
 )
 
 type Frame struct {

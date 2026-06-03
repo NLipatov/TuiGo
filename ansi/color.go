@@ -3,7 +3,7 @@ package ansi
 import "errors"
 
 var (
-	ErrInvalidEscapeSequence = errors.New("Invalid Escape sequence")
+	ErrInvalidEscapeSequence = errors.New("invalid Escape sequence")
 )
 
 type Color struct {
