@@ -41,7 +41,9 @@ func (f Frame) RowAt(y int) ([]Cell, error) {
 	if y >= f.height || y < 0 {
 		return nil, ErrOutOfFrameBounds
 	}
-	return f.cells[f.width*y : f.width*y+f.width], nil
+	start := f.width * y
+	end := start + f.width
+	return f.cells[start:end:end], nil
 }
 
 // CellAt returns a copy of the cell at x,y.
