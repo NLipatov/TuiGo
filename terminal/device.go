@@ -43,3 +43,7 @@ func (d *Device) Size() (width, height int, err error) {
 func (d *Device) IsTerminal() bool {
 	return term.IsTerminal(d.fd)
 }
+
+func (d *Device) IsModeChanged() bool {
+	return d.initialState != nil
+}
