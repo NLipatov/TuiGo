@@ -153,6 +153,7 @@ func (s *Session) startEventLoop() (chan Event, error) {
 	return s.runEventLoop(resizeCh, &resizeListener, keyCh, &keyListener), nil
 }
 
+//nolint:gocognit,cyclop // Keeping cancellation paths explicit is clearer than splitting this event loop into helpers.
 func (s *Session) runEventLoop(
 	resizeCh <-chan resize.Event,
 	resizeListener eventListener,
