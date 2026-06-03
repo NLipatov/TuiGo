@@ -68,7 +68,7 @@ func (s *Session) Start() (<-chan Event, error) {
 	if err := s.setupTerminal(); err != nil {
 		if s.device.IsModeChanged() {
 			if restoreErr := s.restoreTerminal(); restoreErr != nil {
-				return nil, fmt.Errorf("failed to setup terminal: %w; failed to restore terminal: %v", err, restoreErr)
+				return nil, fmt.Errorf("failed to setup terminal: %w; failed to restore terminal: %w", err, restoreErr)
 			}
 		}
 		return nil, err
@@ -76,7 +76,7 @@ func (s *Session) Start() (<-chan Event, error) {
 	events, err := s.startEventLoop()
 	if err != nil {
 		if unsetTerminalErr := s.restoreTerminal(); unsetTerminalErr != nil {
-			return nil, fmt.Errorf("failed to start event loop: %w; terminal was not restored: %v", err, unsetTerminalErr)
+			return nil, fmt.Errorf("failed to start event loop: %w; terminal was not restored: %w", err, unsetTerminalErr)
 		}
 		return nil, err
 	}
