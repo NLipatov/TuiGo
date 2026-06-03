@@ -9,8 +9,8 @@ import (
 	"github.com/NLipatov/tuigo/core"
 )
 
-func fullRepaintPrefix(fg, bg ansi.Color) string {
-	return fg.String() + bg.String() + string(ansi.CLEAR_SCREEN) + string(ansi.CURSOR_HOME)
+func fullRepaintPrefix() string {
+	return string(ansi.CLEAR_SCREEN) + string(ansi.CURSOR_HOME)
 }
 
 func TestRendererRenderWritesCell(t *testing.T) {
@@ -35,7 +35,7 @@ func TestRendererRenderWritesCell(t *testing.T) {
 		t.Fatalf("Render() error = %v", err)
 	}
 
-	want := fullRepaintPrefix(fg, bg) + "\x1b[1;1H" + "x"
+	want := fullRepaintPrefix() + "\x1b[1;1H" + string(ansi.FG_RED) + string(ansi.BG_BLACK) + "x"
 	if got := out.String(); got != want {
 		t.Fatalf("rendered output = %q, want %q", got, want)
 	}
@@ -180,7 +180,7 @@ func TestRendererRenderReappliesBackgroundAfterForegroundReset(t *testing.T) {
 		t.Fatalf("Render() error = %v", err)
 	}
 
-	want := fullRepaintPrefix(title, bg) + "\x1b[1;1H" + "t" + string(ansi.FG_WHITE) + string(ansi.BG_BLACK) + " "
+	want := fullRepaintPrefix() + "\x1b[1;1H" + string(ansi.FG_BOLD_WHITE) + string(ansi.BG_BLACK) + "t" + string(ansi.FG_WHITE) + string(ansi.BG_BLACK) + " "
 	if got := out.String(); got != want {
 		t.Fatalf("rendered output = %q, want %q", got, want)
 	}
@@ -317,7 +317,7 @@ func TestRendererRenderWritesFullFrameAfterResize(t *testing.T) {
 		t.Fatalf("Render() error = %v", err)
 	}
 
-	want := fullRepaintPrefix(fg, bg) + "\x1b[1;1H" + "yz"
+	want := fullRepaintPrefix() + "\x1b[1;1H" + string(ansi.FG_RED) + string(ansi.BG_BLACK) + "yz"
 	if got := out.String(); got != want {
 		t.Fatalf("rendered output = %q, want %q", got, want)
 	}
@@ -350,7 +350,7 @@ func TestRendererRenderRetriesFullFrameAfterWriteError(t *testing.T) {
 		t.Fatalf("Render() error = %v", err)
 	}
 
-	want := fullRepaintPrefix(fg, bg) + "\x1b[1;1H" + "x"
+	want := fullRepaintPrefix() + "\x1b[1;1H" + string(ansi.FG_RED) + string(ansi.BG_BLACK) + "x"
 	if got := writer.out.String(); got != want {
 		t.Fatalf("rendered output = %q, want %q", got, want)
 	}
