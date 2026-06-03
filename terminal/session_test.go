@@ -20,8 +20,12 @@ func TestNewSessionWiresRendererToSessionOutput(t *testing.T) {
 	if err != nil {
 		t.Fatalf("os.Pipe() error = %v", err)
 	}
-	defer in.Close()
-	defer closeIn.Close()
+	defer func() {
+		_ = in.Close()
+	}()
+	defer func() {
+		_ = closeIn.Close()
+	}()
 
 	var out bytes.Buffer
 	session, err := NewSession(context.Background(), in, &out)
