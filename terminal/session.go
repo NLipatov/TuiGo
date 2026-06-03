@@ -66,6 +66,11 @@ func (s *Session) Start() (<-chan Event, error) {
 		return s.events, nil
 	}
 	if err := s.setupTerminal(); err != nil {
+		if s.device.IsModeChanged() {
+			if restoreErr := s.restoreTerminal(); restoreErr != nil {
+				return nil, fmt.Errorf("failed to setup terminal: %w; failed to restore terminal: %v", err, restoreErr)
+			}
+		}
 		return nil, err
 	}
 	events, err := s.startEventLoop()
@@ -81,7 +86,12 @@ func (s *Session) Start() (<-chan Event, error) {
 }
 
 func (s *Session) Close() error {
-	return s.restoreTerminal()
+	if s.device.IsModeChanged() {
+		if err := s.restoreTerminal(); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func (s *Session) Render(frame core.Frame) error {

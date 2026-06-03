@@ -12,6 +12,7 @@ import (
 	"github.com/NLipatov/tuigo/core"
 	"github.com/NLipatov/tuigo/terminal/input"
 	"github.com/NLipatov/tuigo/terminal/resize"
+	"golang.org/x/term"
 )
 
 func TestNewSessionWiresRendererToSessionOutput(t *testing.T) {
@@ -46,6 +47,58 @@ func TestNewSessionWiresRendererToSessionOutput(t *testing.T) {
 	}
 	if !bytes.Contains(out.Bytes(), []byte("x")) {
 		t.Fatalf("session output = %q, want rendered frame", out.String())
+	}
+}
+
+func TestSessionCloseBeforeStartWritesNothing(t *testing.T) {
+	var out bytes.Buffer
+	session := Session{writer: &out}
+
+	if err := session.Close(); err != nil {
+		t.Fatalf("Close() error = %v", err)
+	}
+	if got := out.String(); got != "" {
+		t.Fatalf("session output = %q, want empty output", got)
+	}
+}
+
+func TestSessionStartWritesNothingWhenRawModeSetupFails(t *testing.T) {
+	var out bytes.Buffer
+	session := Session{
+		ctx:    context.Background(),
+		writer: &out,
+		device: Device{fd: -1},
+	}
+
+	_, err := session.Start()
+	if err == nil {
+		t.Fatal("Start() error = nil, want error")
+	}
+	if got := out.String(); got != "" {
+		t.Fatalf("session output = %q, want empty output", got)
+	}
+}
+
+func TestSessionStartRestoresTerminalOnSetupError(t *testing.T) {
+	setupErr := errors.New("setup failed")
+	writer := failOnceSessionWriter{err: setupErr}
+	session := Session{
+		ctx:    context.Background(),
+		writer: &writer,
+		device: Device{
+			fd:           -1,
+			initialState: &term.State{},
+		},
+	}
+
+	_, err := session.Start()
+	if !errors.Is(err, setupErr) {
+		t.Fatalf("Start() error = %v, want wrapped %v", err, setupErr)
+	}
+
+	want := string(ansi.RESET) + string(ansi.SHOW_CURSOR) + string(ansi.EXIT_ALTERNATE_SCREEN)
+	if got := writer.out.String(); got != want {
+		t.Fatalf("session output = %q, want restore commands %q", got, want)
 	}
 }
 
@@ -181,4 +234,26 @@ func contextCanceledListener(ctx context.Context) eventListener {
 		<-ctx.Done()
 		return ctx.Err()
 	})
+}
+
+type failOnceSessionWriter struct {
+	err    error
+	failed bool
+	out    bytes.Buffer
+}
+
+func (w *failOnceSessionWriter) Write(p []byte) (int, error) {
+	if !w.failed {
+		w.failed = true
+		return 0, w.err
+	}
+	return w.out.Write(p)
+}
+
+func (w *failOnceSessionWriter) WriteString(s string) (int, error) {
+	if !w.failed {
+		w.failed = true
+		return 0, w.err
+	}
+	return w.out.WriteString(s)
 }
