@@ -27,11 +27,9 @@ func (i *Parser) FlushPendingEscape() ParseResult {
 	}
 	rest := append([]byte(nil), i.buf[1:]...)
 	i.buf = i.buf[:0]
-	events := []Event{{Code: KeyEsc}}
-	events = append(events, i.Feed(rest).Events...)
-	return ParseResult{
-		Events: events,
-	}
+	result := i.Feed(rest)
+	result.Events = append([]Event{{Code: KeyEsc}}, result.Events...)
+	return result
 }
 
 func (i *Parser) Feed(buf []byte) ParseResult {
