@@ -20,7 +20,7 @@ func TestNewInputListenerRejectsNilDependencies(t *testing.T) {
 		name   string
 		ctx    context.Context
 		reader io.ReadCloser
-		parser *Parser
+		parser EventParser
 		events chan<- Event
 		want   error
 	}{
