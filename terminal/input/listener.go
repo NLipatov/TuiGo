@@ -18,26 +18,27 @@ var (
 	ErrReadChanClosed = errors.New("terminal/input: read channel closed")
 )
 
-type ParseResult struct {
-	Events       []Event
-	NeedsTimeout bool
+type readResult struct {
+	N    int
+	Data [64]byte
+	Err  error
 }
 
-type Parser interface {
-	Feed([]byte) ParseResult
-	Timeout() ParseResult
+type ParseResult struct {
+	Events           []Event
+	HasPendingEscape bool
 }
 
 type Listener struct {
 	ctx             context.Context
 	reader          io.ReadCloser
-	parser          Parser
+	parser          *Parser
 	out             chan<- Event
 	closeReaderOnce sync.Once
 	closeReaderErr  error
 }
 
-func NewListener(ctx context.Context, reader io.ReadCloser, parser Parser, ch chan<- Event) (Listener, error) {
+func NewListener(ctx context.Context, reader io.ReadCloser, parser *Parser, ch chan<- Event) (Listener, error) {
 	if ctx == nil {
 		return Listener{}, ErrNilContext
 	}
@@ -68,27 +69,7 @@ func (i *Listener) Listen() error {
 		case <-done:
 		}
 	}()
-	type readResult struct {
-		N    int
-		Data [64]byte
-		Err  error
-	}
-	readCh := make(chan readResult)
-	go func() {
-		defer close(readCh)
-		for {
-			var result readResult
-			result.N, result.Err = i.reader.Read(result.Data[:])
-			select {
-			case <-i.ctx.Done():
-				return
-			case readCh <- result:
-			}
-			if result.Err != nil {
-				return
-			}
-		}
-	}()
+	readCh := i.readResults()
 	timeout := time.NewTimer(inputTimeout)
 	i.stopTimer(timeout)
 	for {
@@ -111,12 +92,32 @@ func (i *Listener) Listen() error {
 				return err
 			}
 		case <-timeout.C:
-			results := i.parser.Timeout()
+			results := i.parser.FlushPendingEscape()
 			if err := i.handleParserResult(results, timeout); err != nil {
 				return err
 			}
 		}
 	}
+}
+
+func (i *Listener) readResults() <-chan readResult {
+	readCh := make(chan readResult)
+	go func() {
+		defer close(readCh)
+		for {
+			var result readResult
+			result.N, result.Err = i.reader.Read(result.Data[:])
+			select {
+			case <-i.ctx.Done():
+				return
+			case readCh <- result:
+			}
+			if result.Err != nil {
+				return
+			}
+		}
+	}()
+	return readCh
 }
 
 func (i *Listener) handleParserResult(result ParseResult, timeout *time.Timer) error {
@@ -127,7 +128,7 @@ func (i *Listener) handleParserResult(result ParseResult, timeout *time.Timer) e
 		case i.out <- event:
 		}
 	}
-	if result.NeedsTimeout {
+	if result.HasPendingEscape {
 		i.stopTimer(timeout)
 		_ = timeout.Reset(inputTimeout)
 		return nil

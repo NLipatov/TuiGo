@@ -9,93 +9,32 @@ import (
 	"github.com/NLipatov/tuigo/ansi"
 )
 
-var escapeSequences = []struct {
-	sequence []byte
-	event    Event
-}{
-	{[]byte(ansi.CSI + "A"), Event{Code: KeyUp}},
-	{[]byte(ansi.CSI + "B"), Event{Code: KeyDown}},
-	{[]byte(ansi.CSI + "C"), Event{Code: KeyRight}},
-	{[]byte(ansi.CSI + "D"), Event{Code: KeyLeft}},
-	{[]byte(ansi.CSI + "H"), Event{Code: KeyHome}},
-	{[]byte(ansi.CSI + "F"), Event{Code: KeyEnd}},
-	{[]byte(ansi.CSI + "3~"), Event{Code: KeyDelete}},
-	{[]byte(ansi.CSI + "5~"), Event{Code: KeyPageUp}},
-	{[]byte(ansi.CSI + "6~"), Event{Code: KeyPageDown}},
-	{[]byte(ansi.CSI + "Z"), Event{Code: KeyTab, Mod: ModShift}},
-	{[]byte(ansi.CSI + "11~"), Event{Code: KeyF1}},
-	{[]byte(ansi.CSI + "12~"), Event{Code: KeyF2}},
-	{[]byte(ansi.CSI + "13~"), Event{Code: KeyF3}},
-	{[]byte(ansi.CSI + "14~"), Event{Code: KeyF4}},
-	{[]byte(ansi.CSI + "15~"), Event{Code: KeyF5}},
-	{[]byte(ansi.CSI + "17~"), Event{Code: KeyF6}},
-	{[]byte(ansi.CSI + "18~"), Event{Code: KeyF7}},
-	{[]byte(ansi.CSI + "19~"), Event{Code: KeyF8}},
-	{[]byte(ansi.CSI + "20~"), Event{Code: KeyF9}},
-	{[]byte(ansi.CSI + "21~"), Event{Code: KeyF10}},
-	{[]byte(ansi.CSI + "23~"), Event{Code: KeyF11}},
-	{[]byte(ansi.CSI + "24~"), Event{Code: KeyF12}},
-}
-
-var ss3Sequences = []struct {
-	sequence []byte
-	event    Event
-}{
-	{[]byte(ansi.SS3 + "H"), Event{Code: KeyHome}},
-	{[]byte(ansi.SS3 + "F"), Event{Code: KeyEnd}},
-	{[]byte(ansi.SS3 + "P"), Event{Code: KeyF1}},
-	{[]byte(ansi.SS3 + "Q"), Event{Code: KeyF2}},
-	{[]byte(ansi.SS3 + "R"), Event{Code: KeyF3}},
-	{[]byte(ansi.SS3 + "S"), Event{Code: KeyF4}},
-}
-
-var controlBytes = []struct {
-	b     byte
-	event Event
-}{
-	{'\r', Event{Code: KeyEnter}},
-	{'\n', Event{Code: KeyEnter}},
-	{'\t', Event{Code: KeyTab}},
-	{0x7f, Event{Code: KeyBackspace}},
-	{0x08, Event{Code: KeyBackspace}},
-}
-
-type parseStatus uint8
-
-const (
-	parseNoMatch parseStatus = iota
-	parseNeedMore
-	parseDone
-)
-
-type InputParser struct {
+type Parser struct {
 	buf []byte
 }
 
-func NewInputParser() *InputParser {
-	return &InputParser{
+func NewParser() *Parser {
+	return &Parser{
 		buf: make([]byte, 0, utf8.UTFMax),
 	}
 }
 
-func (i *InputParser) Timeout() ParseResult {
-	if i.needsTimeout() == false {
+// FlushPendingEscape emits a pending ESC byte as KeyEsc after the caller's input timeout expires.
+// Any buffered bytes after ESC are parsed as regular input.
+func (i *Parser) FlushPendingEscape() ParseResult {
+	if !i.hasPendingEscape() {
 		return ParseResult{}
 	}
 	rest := append([]byte(nil), i.buf[1:]...)
-	// drain i.buf
 	i.buf = i.buf[:0]
-	// create events from rest
 	events := []Event{{Code: KeyEsc}}
-	for _, res := range i.Feed(rest).Events {
-		events = append(events, res)
-	}
+	events = append(events, i.Feed(rest).Events...)
 	return ParseResult{
 		Events: events,
 	}
 }
 
-func (i *InputParser) Feed(buf []byte) ParseResult {
+func (i *Parser) Feed(buf []byte) ParseResult {
 	i.buf = append(i.buf, buf...)
 	events := make([]Event, 0)
 	for len(i.buf) > 0 {
@@ -107,16 +46,16 @@ func (i *InputParser) Feed(buf []byte) ParseResult {
 		i.buf = i.buf[n:]
 	}
 	return ParseResult{
-		Events:       events,
-		NeedsTimeout: i.needsTimeout(),
+		Events:           events,
+		HasPendingEscape: i.hasPendingEscape(),
 	}
 }
 
-func (i *InputParser) needsTimeout() bool {
+func (i *Parser) hasPendingEscape() bool {
 	return len(i.buf) > 0 && i.isEscapeByte(i.buf[0])
 }
 
-func (i *InputParser) parseEvent(buf []byte) (Event, int, parseStatus) {
+func (i *Parser) parseEvent(buf []byte) (Event, int, parseStatus) {
 	if len(buf) == 0 {
 		return Event{}, 0, parseNeedMore
 	}
@@ -129,7 +68,7 @@ func (i *InputParser) parseEvent(buf []byte) (Event, int, parseStatus) {
 	return i.parseRuneEvent(buf)
 }
 
-func (i *InputParser) parseEscEvent(buf []byte) (Event, int, parseStatus) {
+func (i *Parser) parseEscEvent(buf []byte) (Event, int, parseStatus) {
 	if len(buf) == 0 {
 		return Event{}, 0, parseNeedMore
 	}
@@ -140,24 +79,19 @@ func (i *InputParser) parseEscEvent(buf []byte) (Event, int, parseStatus) {
 		return Event{}, 0, parseNeedMore
 	}
 	for _, candidate := range escapeSequences {
-		// full escape sequence prefix
 		if bytes.HasPrefix(buf, candidate.sequence) {
 			return candidate.event, len(candidate.sequence), parseDone
 		}
-		// partial escape sequence prefix
 		if bytes.HasPrefix(candidate.sequence, buf) {
 			return Event{}, 0, parseNeedMore
 		}
 	}
-	// if CSI
 	if buf[1] == '[' {
 		return i.parseCSISequence(buf)
 	}
-	// If SS3
 	if buf[1] == 'O' {
 		return i.parseSS3Sequence(buf)
 	}
-	// Is control byte
 	if event, n, status := i.parseControlEvent(buf[1:]); status != parseNoMatch {
 		if status != parseDone {
 			return Event{}, 0, status
@@ -165,7 +99,6 @@ func (i *InputParser) parseEscEvent(buf []byte) (Event, int, parseStatus) {
 		event.Mod |= ModAlt
 		return event, n + 1, parseDone
 	}
-	// Is rune
 	event, n, status := i.parseRuneEvent(buf[1:])
 	if status != parseDone {
 		return Event{}, 0, status
@@ -174,7 +107,7 @@ func (i *InputParser) parseEscEvent(buf []byte) (Event, int, parseStatus) {
 	return event, n + 1, parseDone
 }
 
-func (i *InputParser) parseCSISequence(buf []byte) (Event, int, parseStatus) {
+func (i *Parser) parseCSISequence(buf []byte) (Event, int, parseStatus) {
 	finalIdx, ok := findCSIFinal(buf)
 	if !ok {
 		return Event{}, 0, parseNeedMore
@@ -188,7 +121,7 @@ func (i *InputParser) parseCSISequence(buf []byte) (Event, int, parseStatus) {
 	return event, finalIdx + 1, parseDone
 }
 
-func (i *InputParser) parseSS3Sequence(buf []byte) (Event, int, parseStatus) {
+func (i *Parser) parseSS3Sequence(buf []byte) (Event, int, parseStatus) {
 	for _, candidate := range ss3Sequences {
 		if bytes.HasPrefix(buf, candidate.sequence) {
 			return candidate.event, len(candidate.sequence), parseDone
@@ -200,7 +133,7 @@ func (i *InputParser) parseSS3Sequence(buf []byte) (Event, int, parseStatus) {
 	return Event{Code: KeyUnknown}, len(ansi.SS3) + 1, parseDone
 }
 
-func (i *InputParser) parseControlEvent(buf []byte) (Event, int, parseStatus) {
+func (i *Parser) parseControlEvent(buf []byte) (Event, int, parseStatus) {
 	if len(buf) == 0 {
 		return Event{}, 0, parseNeedMore
 	}
@@ -218,7 +151,7 @@ func (i *InputParser) parseControlEvent(buf []byte) (Event, int, parseStatus) {
 	return Event{}, 0, parseNoMatch
 }
 
-func (i *InputParser) parseRuneEvent(buf []byte) (Event, int, parseStatus) {
+func (i *Parser) parseRuneEvent(buf []byte) (Event, int, parseStatus) {
 	if !utf8.FullRune(buf) {
 		return Event{}, 0, parseNeedMore
 	}
@@ -230,7 +163,7 @@ func (i *InputParser) parseRuneEvent(buf []byte) (Event, int, parseStatus) {
 	}, n, parseDone
 }
 
-func (i *InputParser) isEscapeByte(b byte) bool {
+func (i *Parser) isEscapeByte(b byte) bool {
 	return byte(ansi.ESCAPEByte) == b
 }
 
@@ -282,6 +215,7 @@ func eventForCSITilde(params string) (Event, bool) {
 	return event, true
 }
 
+//nolint:cyclop // This switch is a flat CSI numeric key mapping table.
 func keyCodeForCSITilde(value int) KeyCode {
 	switch value {
 	case 2:

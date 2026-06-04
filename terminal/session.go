@@ -146,7 +146,7 @@ func (s *Session) startEventLoop() (chan Event, error) {
 	resizeCh := make(chan resize.Event)
 	resizeListener := resize.NewListener(s.ctx, resizeCh, &s.device)
 	keyCh := make(chan input.Event)
-	keyListener, err := input.NewListener(s.ctx, s.reader, input.NewInputParser(), keyCh)
+	keyListener, err := input.NewListener(s.ctx, s.reader, input.NewParser(), keyCh)
 	if err != nil {
 		return nil, err
 	}

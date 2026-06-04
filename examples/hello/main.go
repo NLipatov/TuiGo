@@ -23,7 +23,9 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	defer session.Close()
+	defer func() {
+		_ = session.Close()
+	}()
 
 	width, height, err := session.Size()
 	if err != nil {

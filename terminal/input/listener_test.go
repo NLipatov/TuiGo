@@ -13,14 +13,14 @@ import (
 func TestNewInputListenerRejectsNilDependencies(t *testing.T) {
 	ctx := context.Background()
 	reader := &scriptedReadCloser{}
-	parser := &recordingParser{}
+	inputParser := NewParser()
 	events := make(chan Event)
 
 	tests := []struct {
 		name   string
 		ctx    context.Context
 		reader io.ReadCloser
-		parser Parser
+		parser *Parser
 		events chan<- Event
 		want   error
 	}{
@@ -28,7 +28,7 @@ func TestNewInputListenerRejectsNilDependencies(t *testing.T) {
 			name:   "nil context",
 			ctx:    nil,
 			reader: reader,
-			parser: parser,
+			parser: inputParser,
 			events: events,
 			want:   ErrNilContext,
 		},
@@ -36,7 +36,7 @@ func TestNewInputListenerRejectsNilDependencies(t *testing.T) {
 			name:   "nil reader",
 			ctx:    ctx,
 			reader: nil,
-			parser: parser,
+			parser: inputParser,
 			events: events,
 			want:   ErrNilReader,
 		},
@@ -52,7 +52,7 @@ func TestNewInputListenerRejectsNilDependencies(t *testing.T) {
 			name:   "nil event channel",
 			ctx:    ctx,
 			reader: reader,
-			parser: parser,
+			parser: inputParser,
 			events: nil,
 			want:   ErrNilEventChan,
 		},
@@ -77,17 +77,8 @@ func TestInputListenerListenFeedsParserAndEmitsEvents(t *testing.T) {
 		},
 		err: readErr,
 	}
-	parser := &recordingParser{
-		events: func(buf []byte) []Event {
-			events := make([]Event, 0, len(buf))
-			for _, b := range buf {
-				events = append(events, Event{Code: KeyCode(b)})
-			}
-			return events
-		},
-	}
 	out := make(chan Event, 3)
-	input, err := NewListener(context.Background(), reader, parser, out)
+	input, err := NewListener(context.Background(), reader, NewParser(), out)
 	if err != nil {
 		t.Fatalf("NewInputListener() error = %v", err)
 	}
@@ -97,23 +88,10 @@ func TestInputListenerListenFeedsParserAndEmitsEvents(t *testing.T) {
 		t.Fatalf("Listen() error = %v, want %v", err, readErr)
 	}
 
-	wantFeeds := [][]byte{
-		[]byte("ab"),
-		[]byte("c"),
-	}
-	if len(parser.feeds) != len(wantFeeds) {
-		t.Fatalf("parser feeds = %q, want %q", parser.feeds, wantFeeds)
-	}
-	for idx, want := range wantFeeds {
-		if got := string(parser.feeds[idx]); got != string(want) {
-			t.Fatalf("parser feed %d = %q, want %q", idx, got, want)
-		}
-	}
-
 	wantEvents := []Event{
-		{Code: KeyCode('a')},
-		{Code: KeyCode('b')},
-		{Code: KeyCode('c')},
+		{Code: KeyRune, Text: "a", Mod: ModNone},
+		{Code: KeyRune, Text: "b", Mod: ModNone},
+		{Code: KeyRune, Text: "c", Mod: ModNone},
 	}
 	for idx, want := range wantEvents {
 		got := <-out
@@ -128,17 +106,13 @@ func TestInputListenerListenFeedsParserAndEmitsEvents(t *testing.T) {
 	}
 }
 
-func TestInputListenerListenRunsParserTimeoutWhenRequested(t *testing.T) {
+func TestInputListenerListenFlushesPendingEscapeAfterTimeout(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
 	reader := newBlockingAfterReadsReadCloser([][]byte{[]byte("\x1b")})
-	parser := &recordingParser{
-		needsTimeout:  true,
-		timeoutEvents: []Event{{Code: KeyEsc}},
-	}
 	out := make(chan Event, 1)
-	input, err := NewListener(ctx, reader, parser, out)
+	input, err := NewListener(ctx, reader, NewParser(), out)
 	if err != nil {
 		t.Fatalf("NewInputListener() error = %v", err)
 	}
@@ -151,12 +125,6 @@ func TestInputListenerListenRunsParserTimeoutWhenRequested(t *testing.T) {
 	got := receiveInputEvent(t, out)
 	if want := (Event{Code: KeyEsc}); got != want {
 		t.Fatalf("event = %#v, want %#v", got, want)
-	}
-	if len(parser.feeds) != 1 || string(parser.feeds[0]) != "\x1b" {
-		t.Fatalf("parser feeds = %q, want ESC feed", parser.feeds)
-	}
-	if parser.timeouts != 1 {
-		t.Fatalf("parser timeouts = %d, want 1", parser.timeouts)
 	}
 
 	cancel()
@@ -173,9 +141,8 @@ func TestInputListenerListenRunsParserTimeoutWhenRequested(t *testing.T) {
 func TestInputListenerListenReturnsReadErrorWithoutCallingParser(t *testing.T) {
 	readErr := errors.New("read failed")
 	reader := &scriptedReadCloser{err: readErr}
-	parser := &recordingParser{}
 	out := make(chan Event, 1)
-	input, err := NewListener(context.Background(), reader, parser, out)
+	input, err := NewListener(context.Background(), reader, NewParser(), out)
 	if err != nil {
 		t.Fatalf("NewInputListener() error = %v", err)
 	}
@@ -183,9 +150,6 @@ func TestInputListenerListenReturnsReadErrorWithoutCallingParser(t *testing.T) {
 	err = input.Listen()
 	if !errors.Is(err, readErr) {
 		t.Fatalf("Listen() error = %v, want %v", err, readErr)
-	}
-	if len(parser.feeds) != 0 {
-		t.Fatalf("parser feeds = %q, want none", parser.feeds)
 	}
 	select {
 	case got := <-out:
@@ -199,7 +163,7 @@ func TestInputListenerListenReturnsContextErrorAndClosesReader(t *testing.T) {
 	defer cancel()
 
 	reader := newBlockingReadCloser()
-	input, err := NewListener(ctx, reader, &recordingParser{}, make(chan Event))
+	input, err := NewListener(ctx, reader, NewParser(), make(chan Event))
 	if err != nil {
 		t.Fatalf("NewInputListener() error = %v", err)
 	}
@@ -237,7 +201,7 @@ func TestInputListenerCloseIsIdempotent(t *testing.T) {
 	input, err := NewListener(
 		context.Background(),
 		reader,
-		&recordingParser{},
+		NewParser(),
 		make(chan Event),
 	)
 	if err != nil {
@@ -253,30 +217,6 @@ func TestInputListenerCloseIsIdempotent(t *testing.T) {
 	if reader.closeCount != 1 {
 		t.Fatalf("reader Close calls = %d, want 1", reader.closeCount)
 	}
-}
-
-type recordingParser struct {
-	feeds         [][]byte
-	events        func([]byte) []Event
-	needsTimeout  bool
-	timeoutEvents []Event
-	timeouts      int
-}
-
-func (p *recordingParser) Feed(buf []byte) ParseResult {
-	p.feeds = append(p.feeds, append([]byte(nil), buf...))
-	if p.events == nil {
-		return ParseResult{NeedsTimeout: p.needsTimeout}
-	}
-	return ParseResult{
-		Events:       p.events(buf),
-		NeedsTimeout: p.needsTimeout,
-	}
-}
-
-func (p *recordingParser) Timeout() ParseResult {
-	p.timeouts++
-	return ParseResult{Events: p.timeoutEvents}
 }
 
 type scriptedReadCloser struct {
