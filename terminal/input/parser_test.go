@@ -4,8 +4,8 @@ import (
 	"testing"
 )
 
-func TestInputParserParsesRunes(t *testing.T) {
-	parser := NewInputParser()
+func TestParserParsesRunes(t *testing.T) {
+	parser := NewParser()
 
 	got := parser.Feed([]byte("aЖ"))
 	want := []Event{
@@ -15,8 +15,8 @@ func TestInputParserParsesRunes(t *testing.T) {
 	assertEvents(t, got, want)
 }
 
-func TestInputParserWaitsForIncompleteUTF8Rune(t *testing.T) {
-	parser := NewInputParser()
+func TestParserWaitsForIncompleteUTF8Rune(t *testing.T) {
+	parser := NewParser()
 
 	got := parser.Feed([]byte{0xd0})
 	assertEvents(t, got, nil)
@@ -25,7 +25,7 @@ func TestInputParserWaitsForIncompleteUTF8Rune(t *testing.T) {
 	assertEvents(t, got, []Event{{Code: KeyRune, Text: "Ж", Mod: ModNone}})
 }
 
-func TestInputParserParsesControlBytes(t *testing.T) {
+func TestParserParsesControlBytes(t *testing.T) {
 	tests := []struct {
 		name string
 		in   []byte
@@ -43,14 +43,14 @@ func TestInputParserParsesControlBytes(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			parser := NewInputParser()
+			parser := NewParser()
 			got := parser.Feed(tt.in)
 			assertEvents(t, got, []Event{tt.want})
 		})
 	}
 }
 
-func TestInputParserParsesEscapeSequences(t *testing.T) {
+func TestParserParsesEscapeSequences(t *testing.T) {
 	tests := []struct {
 		name string
 		in   []byte
@@ -77,47 +77,47 @@ func TestInputParserParsesEscapeSequences(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			parser := NewInputParser()
+			parser := NewParser()
 			got := parser.Feed(tt.in)
 			assertEvents(t, got, []Event{tt.want})
 		})
 	}
 }
 
-func TestInputParserTimesOutPendingEsc(t *testing.T) {
-	parser := NewInputParser()
+func TestParserFlushesPendingEscAfterTimeout(t *testing.T) {
+	parser := NewParser()
 
 	got := parser.Feed([]byte("\x1b"))
 	assertEvents(t, got, nil)
-	if !got.NeedsTimeout {
-		t.Fatalf("NeedsTimeout = false, want true")
+	if !got.HasPendingEscape {
+		t.Fatalf("HasPendingEscape = false, want true")
 	}
 
-	got = parser.Timeout()
+	got = parser.FlushPendingEscape()
 	assertEvents(t, got, []Event{{Code: KeyEsc}})
-	if got.NeedsTimeout {
-		t.Fatalf("NeedsTimeout = true, want false")
+	if got.HasPendingEscape {
+		t.Fatalf("HasPendingEscape = true, want false")
 	}
 }
 
-func TestInputParserParsesSplitEscapeSequence(t *testing.T) {
-	parser := NewInputParser()
+func TestParserParsesSplitEscapeSequence(t *testing.T) {
+	parser := NewParser()
 
 	got := parser.Feed([]byte("\x1b"))
 	assertEvents(t, got, nil)
-	if !got.NeedsTimeout {
-		t.Fatalf("NeedsTimeout = false, want true")
+	if !got.HasPendingEscape {
+		t.Fatalf("HasPendingEscape = false, want true")
 	}
 
 	got = parser.Feed([]byte("[A"))
 	assertEvents(t, got, []Event{{Code: KeyUp}})
-	if got.NeedsTimeout {
-		t.Fatalf("NeedsTimeout = true, want false")
+	if got.HasPendingEscape {
+		t.Fatalf("HasPendingEscape = true, want false")
 	}
 }
 
-func TestInputParserParsesEscapeSequencesBeforeFollowingInput(t *testing.T) {
-	parser := NewInputParser()
+func TestParserParsesEscapeSequencesBeforeFollowingInput(t *testing.T) {
+	parser := NewParser()
 
 	got := parser.Feed([]byte("\x1b[Aa"))
 	want := []Event{
@@ -127,46 +127,46 @@ func TestInputParserParsesEscapeSequencesBeforeFollowingInput(t *testing.T) {
 	assertEvents(t, got, want)
 }
 
-func TestInputParserWaitsForIncompleteEscapeSequence(t *testing.T) {
-	parser := NewInputParser()
+func TestParserWaitsForIncompleteEscapeSequence(t *testing.T) {
+	parser := NewParser()
 
 	got := parser.Feed([]byte("\x1b["))
 	assertEvents(t, got, nil)
-	if !got.NeedsTimeout {
-		t.Fatalf("NeedsTimeout = false, want true")
+	if !got.HasPendingEscape {
+		t.Fatalf("HasPendingEscape = false, want true")
 	}
 
 	got = parser.Feed([]byte("A"))
 	assertEvents(t, got, []Event{{Code: KeyUp}})
-	if got.NeedsTimeout {
-		t.Fatalf("NeedsTimeout = true, want false")
+	if got.HasPendingEscape {
+		t.Fatalf("HasPendingEscape = true, want false")
 	}
 }
 
-func TestInputParserParsesAltRune(t *testing.T) {
-	parser := NewInputParser()
+func TestParserParsesAltRune(t *testing.T) {
+	parser := NewParser()
 
 	got := parser.Feed([]byte("\x1bx"))
 	assertEvents(t, got, []Event{{Code: KeyRune, Text: "x", Mod: ModAlt}})
 }
 
-func TestInputParserParsesAltRuneSplitAcrossFeeds(t *testing.T) {
-	parser := NewInputParser()
+func TestParserParsesAltRuneSplitAcrossFeeds(t *testing.T) {
+	parser := NewParser()
 
 	got := parser.Feed([]byte("\x1b"))
 	assertEvents(t, got, nil)
-	if !got.NeedsTimeout {
-		t.Fatalf("NeedsTimeout = false, want true")
+	if !got.HasPendingEscape {
+		t.Fatalf("HasPendingEscape = false, want true")
 	}
 
 	got = parser.Feed([]byte("x"))
 	assertEvents(t, got, []Event{{Code: KeyRune, Text: "x", Mod: ModAlt}})
-	if got.NeedsTimeout {
-		t.Fatalf("NeedsTimeout = true, want false")
+	if got.HasPendingEscape {
+		t.Fatalf("HasPendingEscape = true, want false")
 	}
 }
 
-func TestInputParserParsesCSIModifiers(t *testing.T) {
+func TestParserParsesCSIModifiers(t *testing.T) {
 	tests := []struct {
 		name string
 		in   []byte
@@ -181,15 +181,15 @@ func TestInputParserParsesCSIModifiers(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			parser := NewInputParser()
+			parser := NewParser()
 			got := parser.Feed(tt.in)
 			assertEvents(t, got, []Event{tt.want})
 		})
 	}
 }
 
-func TestInputParserParsesUnknownCSISequence(t *testing.T) {
-	parser := NewInputParser()
+func TestParserParsesUnknownCSISequence(t *testing.T) {
+	parser := NewParser()
 
 	got := parser.Feed([]byte("\x1b[999z"))
 	assertEvents(t, got, []Event{{Code: KeyUnknown}})

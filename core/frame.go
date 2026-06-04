@@ -36,19 +36,23 @@ func (f Frame) Width() int {
 	return f.width
 }
 
+// RowAt returns a mutable, zero-copy view of row y backed by the frame's cell buffer.
+func (f Frame) RowAt(y int) ([]Cell, error) {
+	if y >= f.height || y < 0 {
+		return nil, ErrOutOfFrameBounds
+	}
+	start := f.width * y
+	end := start + f.width
+	return f.cells[start:end:end], nil
+}
+
+// CellAt returns a copy of the cell at x,y.
 func (f Frame) CellAt(x, y int) (Cell, error) {
 	idx, err := f.idx(x, y)
 	if err != nil {
 		return Cell{}, err
 	}
 	return f.cells[idx], nil
-}
-
-func (f Frame) RowAt(y int) ([]Cell, error) {
-	if y >= f.height || y < 0 {
-		return nil, ErrOutOfFrameBounds
-	}
-	return f.cells[f.width*y : f.width*y+f.width], nil
 }
 
 func (f Frame) idx(x, y int) (int, error) {

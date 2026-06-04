@@ -68,7 +68,7 @@ func (s *Session) Start() (<-chan Event, error) {
 	if err := s.setupTerminal(); err != nil {
 		if s.device.IsModeChanged() {
 			if restoreErr := s.restoreTerminal(); restoreErr != nil {
-				return nil, fmt.Errorf("failed to setup terminal: %w; failed to restore terminal: %v", err, restoreErr)
+				return nil, fmt.Errorf("failed to setup terminal: %w; failed to restore terminal: %w", err, restoreErr)
 			}
 		}
 		return nil, err
@@ -76,7 +76,7 @@ func (s *Session) Start() (<-chan Event, error) {
 	events, err := s.startEventLoop()
 	if err != nil {
 		if unsetTerminalErr := s.restoreTerminal(); unsetTerminalErr != nil {
-			return nil, fmt.Errorf("failed to start event loop: %w; terminal was not restored: %v", err, unsetTerminalErr)
+			return nil, fmt.Errorf("failed to start event loop: %w; terminal was not restored: %w", err, unsetTerminalErr)
 		}
 		return nil, err
 	}
@@ -146,13 +146,14 @@ func (s *Session) startEventLoop() (chan Event, error) {
 	resizeCh := make(chan resize.Event)
 	resizeListener := resize.NewListener(s.ctx, resizeCh, &s.device)
 	keyCh := make(chan input.Event)
-	keyListener, err := input.NewListener(s.ctx, s.reader, input.NewInputParser(), keyCh)
+	keyListener, err := input.NewListener(s.ctx, s.reader, input.NewParser(), keyCh)
 	if err != nil {
 		return nil, err
 	}
 	return s.runEventLoop(resizeCh, &resizeListener, keyCh, &keyListener), nil
 }
 
+//nolint:gocognit,cyclop // Keeping cancellation paths explicit is clearer than splitting this event loop into helpers.
 func (s *Session) runEventLoop(
 	resizeCh <-chan resize.Event,
 	resizeListener eventListener,

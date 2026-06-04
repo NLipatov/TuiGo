@@ -78,11 +78,6 @@ func (r *Renderer) ensureOutCapacity() {
 }
 
 func (r *Renderer) renderFullFrame() error {
-	cell, err := r.frame.CellAt(0, 0)
-	if err != nil {
-		return err
-	}
-	r.renderStyle(cell)
 	r.out = append(r.out, ansi.CLEAR_SCREEN...)
 	r.out = append(r.out, ansi.CURSOR_HOME...)
 

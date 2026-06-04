@@ -249,6 +249,23 @@ func TestFrameRowAtReadsCellsByRowMajorIndex(t *testing.T) {
 	}
 }
 
+func TestFrameRowAtLimitsCapacityToRow(t *testing.T) {
+	frame, err := NewFrame(3, 2, make([]Cell, 6))
+	if err != nil {
+		t.Fatalf("NewFrame() error = %v", err)
+	}
+
+	for y := range frame.Height() {
+		row, err := frame.RowAt(y)
+		if err != nil {
+			t.Fatalf("RowAt(%d) error = %v", y, err)
+		}
+		if cap(row) != frame.Width() {
+			t.Fatalf("cap(RowAt(%d)) = %d, want %d", y, cap(row), frame.Width())
+		}
+	}
+}
+
 func TestFrameRowAtRejectsOutOfBoundsRows(t *testing.T) {
 	tests := []struct {
 		name string
