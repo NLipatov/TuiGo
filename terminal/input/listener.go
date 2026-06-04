@@ -30,7 +30,7 @@ type EventParser interface {
 }
 
 type ParseResult struct {
-	Events           []Event
+	Events           []KeyEvent
 	HasPendingEscape bool
 }
 
@@ -38,12 +38,12 @@ type Listener struct {
 	ctx             context.Context
 	reader          io.ReadCloser
 	parser          EventParser
-	out             chan<- Event
+	out             chan<- KeyEvent
 	closeReaderOnce sync.Once
 	closeReaderErr  error
 }
 
-func NewListener(ctx context.Context, reader io.ReadCloser, parser EventParser, ch chan<- Event) (Listener, error) {
+func NewListener(ctx context.Context, reader io.ReadCloser, parser EventParser, ch chan<- KeyEvent) (Listener, error) {
 	if ctx == nil {
 		return Listener{}, ErrNilContext
 	}

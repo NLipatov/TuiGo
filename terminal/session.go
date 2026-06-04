@@ -145,7 +145,7 @@ func (s *Session) ansiCommand(command ansi.ANSIEscapeSequence) error {
 func (s *Session) startEventLoop() (chan Event, error) {
 	resizeCh := make(chan resize.Event)
 	resizeListener := resize.NewListener(s.ctx, resizeCh, &s.device)
-	keyCh := make(chan input.Event)
+	keyCh := make(chan input.KeyEvent)
 	keyListener, err := input.NewListener(s.ctx, s.reader, input.NewParser(), keyCh)
 	if err != nil {
 		return nil, err
@@ -157,7 +157,7 @@ func (s *Session) startEventLoop() (chan Event, error) {
 func (s *Session) runEventLoop(
 	resizeCh <-chan resize.Event,
 	resizeListener eventListener,
-	keyCh <-chan input.Event,
+	keyCh <-chan input.KeyEvent,
 	keyListener eventListener,
 ) chan Event {
 	outCh := make(chan Event)

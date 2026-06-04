@@ -1,6 +1,6 @@
 package input
 
-type Event struct {
+type KeyEvent struct {
 	Code KeyCode
 	Text string
 	Mod  KeyMod

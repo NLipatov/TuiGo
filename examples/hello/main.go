@@ -56,7 +56,7 @@ func main() {
 	}
 }
 
-func quitRequested(event input.Event) bool {
+func quitRequested(event input.KeyEvent) bool {
 	if event.Code == input.KeyEsc {
 		return true
 	}

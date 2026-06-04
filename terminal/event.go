@@ -17,6 +17,6 @@ const (
 type Event struct {
 	Type   EventType
 	Err    error
-	Key    input.Event
+	Key    input.KeyEvent
 	Resize resize.Event
 }

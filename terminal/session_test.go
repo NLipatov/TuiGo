@@ -112,7 +112,7 @@ func TestSessionEventLoopForwardsInputAndResizeEvents(t *testing.T) {
 
 	session := Session{ctx: ctx}
 	resizeCh := make(chan resize.Event, 1)
-	keyCh := make(chan input.Event, 1)
+	keyCh := make(chan input.KeyEvent, 1)
 	listener := contextCanceledListener(ctx)
 	events := session.runEventLoop(resizeCh, listener, keyCh, listener)
 
@@ -126,7 +126,7 @@ func TestSessionEventLoopForwardsInputAndResizeEvents(t *testing.T) {
 		t.Fatalf("resize event = %#v, want %#v", got.Resize, resizeEvent)
 	}
 
-	keyEvent := input.Event{Code: input.KeyCode(1), Text: "a", Mod: input.ModCtrl}
+	keyEvent := input.KeyEvent{Code: input.KeyCode(1), Text: "a", Mod: input.ModCtrl}
 	keyCh <- keyEvent
 	got = receiveSessionEvent(t, events)
 	if got.Type != EventKey {
@@ -175,7 +175,7 @@ func TestSessionEventLoopEmitsListenerErrors(t *testing.T) {
 			events := session.runEventLoop(
 				make(chan resize.Event),
 				resizeListener,
-				make(chan input.Event),
+				make(chan input.KeyEvent),
 				keyListener,
 			)
 
@@ -197,7 +197,7 @@ func TestSessionEventLoopDoesNotEmitErrorOnContextCancel(t *testing.T) {
 	events := session.runEventLoop(
 		make(chan resize.Event),
 		listener,
-		make(chan input.Event),
+		make(chan input.KeyEvent),
 		listener,
 	)
 

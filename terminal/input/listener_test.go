@@ -14,14 +14,14 @@ func TestNewInputListenerRejectsNilDependencies(t *testing.T) {
 	ctx := context.Background()
 	reader := &scriptedReadCloser{}
 	inputParser := NewParser()
-	events := make(chan Event)
+	events := make(chan KeyEvent)
 
 	tests := []struct {
 		name   string
 		ctx    context.Context
 		reader io.ReadCloser
 		parser EventParser
-		events chan<- Event
+		events chan<- KeyEvent
 		want   error
 	}{
 		{
@@ -77,7 +77,7 @@ func TestInputListenerListenFeedsParserAndEmitsEvents(t *testing.T) {
 		},
 		err: readErr,
 	}
-	out := make(chan Event, 3)
+	out := make(chan KeyEvent, 3)
 	input, err := NewListener(context.Background(), reader, NewParser(), out)
 	if err != nil {
 		t.Fatalf("NewInputListener() error = %v", err)
@@ -88,7 +88,7 @@ func TestInputListenerListenFeedsParserAndEmitsEvents(t *testing.T) {
 		t.Fatalf("Listen() error = %v, want %v", err, readErr)
 	}
 
-	wantEvents := []Event{
+	wantEvents := []KeyEvent{
 		{Code: KeyRune, Text: "a", Mod: ModNone},
 		{Code: KeyRune, Text: "b", Mod: ModNone},
 		{Code: KeyRune, Text: "c", Mod: ModNone},
@@ -111,7 +111,7 @@ func TestInputListenerListenFlushesPendingEscapeAfterTimeout(t *testing.T) {
 	defer cancel()
 
 	reader := newBlockingAfterReadsReadCloser([][]byte{[]byte("\x1b")})
-	out := make(chan Event, 1)
+	out := make(chan KeyEvent, 1)
 	input, err := NewListener(ctx, reader, NewParser(), out)
 	if err != nil {
 		t.Fatalf("NewInputListener() error = %v", err)
@@ -123,7 +123,7 @@ func TestInputListenerListenFlushesPendingEscapeAfterTimeout(t *testing.T) {
 	}()
 
 	got := receiveInputEvent(t, out)
-	if want := (Event{Code: KeyEsc}); got != want {
+	if want := (KeyEvent{Code: KeyEsc}); got != want {
 		t.Fatalf("event = %#v, want %#v", got, want)
 	}
 
@@ -141,7 +141,7 @@ func TestInputListenerListenFlushesPendingEscapeAfterTimeout(t *testing.T) {
 func TestInputListenerListenReturnsReadErrorWithoutCallingParser(t *testing.T) {
 	readErr := errors.New("read failed")
 	reader := &scriptedReadCloser{err: readErr}
-	out := make(chan Event, 1)
+	out := make(chan KeyEvent, 1)
 	input, err := NewListener(context.Background(), reader, NewParser(), out)
 	if err != nil {
 		t.Fatalf("NewInputListener() error = %v", err)
@@ -163,7 +163,7 @@ func TestInputListenerListenReturnsContextErrorAndClosesReader(t *testing.T) {
 	defer cancel()
 
 	reader := newBlockingReadCloser()
-	input, err := NewListener(ctx, reader, NewParser(), make(chan Event))
+	input, err := NewListener(ctx, reader, NewParser(), make(chan KeyEvent))
 	if err != nil {
 		t.Fatalf("NewInputListener() error = %v", err)
 	}
@@ -202,7 +202,7 @@ func TestInputListenerCloseIsIdempotent(t *testing.T) {
 		context.Background(),
 		reader,
 		NewParser(),
-		make(chan Event),
+		make(chan KeyEvent),
 	)
 	if err != nil {
 		t.Fatalf("NewInputListener() error = %v", err)
@@ -301,13 +301,13 @@ func (r *blockingAfterReadsReadCloser) Close() error {
 	return nil
 }
 
-func receiveInputEvent(t *testing.T, events <-chan Event) Event {
+func receiveInputEvent(t *testing.T, events <-chan KeyEvent) KeyEvent {
 	t.Helper()
 	select {
 	case event := <-events:
 		return event
 	case <-time.After(time.Second):
 		t.Fatal("timed out waiting for input event")
-		return Event{}
+		return KeyEvent{}
 	}
 }

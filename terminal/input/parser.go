@@ -28,13 +28,13 @@ func (i *Parser) FlushPendingEscape() ParseResult {
 	rest := append([]byte(nil), i.buf[1:]...)
 	i.buf = i.buf[:0]
 	result := i.Feed(rest)
-	result.Events = append([]Event{{Code: KeyEsc}}, result.Events...)
+	result.Events = append([]KeyEvent{{Code: KeyEsc}}, result.Events...)
 	return result
 }
 
 func (i *Parser) Feed(buf []byte) ParseResult {
 	i.buf = append(i.buf, buf...)
-	events := make([]Event, 0)
+	events := make([]KeyEvent, 0)
 	for len(i.buf) > 0 {
 		event, n, status := i.parseEvent(i.buf)
 		if status != parseDone {
@@ -53,9 +53,9 @@ func (i *Parser) hasPendingEscape() bool {
 	return len(i.buf) > 0 && i.isEscapeByte(i.buf[0])
 }
 
-func (i *Parser) parseEvent(buf []byte) (Event, int, parseStatus) {
+func (i *Parser) parseEvent(buf []byte) (KeyEvent, int, parseStatus) {
 	if len(buf) == 0 {
-		return Event{}, 0, parseNeedMore
+		return KeyEvent{}, 0, parseNeedMore
 	}
 	if event, n, status := i.parseEscEvent(buf); status != parseNoMatch {
 		return event, n, status
@@ -66,22 +66,22 @@ func (i *Parser) parseEvent(buf []byte) (Event, int, parseStatus) {
 	return i.parseRuneEvent(buf)
 }
 
-func (i *Parser) parseEscEvent(buf []byte) (Event, int, parseStatus) {
+func (i *Parser) parseEscEvent(buf []byte) (KeyEvent, int, parseStatus) {
 	if len(buf) == 0 {
-		return Event{}, 0, parseNeedMore
+		return KeyEvent{}, 0, parseNeedMore
 	}
 	if !i.isEscapeByte(buf[0]) {
-		return Event{}, 0, parseNoMatch
+		return KeyEvent{}, 0, parseNoMatch
 	}
 	if len(buf) == 1 {
-		return Event{}, 0, parseNeedMore
+		return KeyEvent{}, 0, parseNeedMore
 	}
 	for _, candidate := range escapeSequences {
 		if bytes.HasPrefix(buf, candidate.sequence) {
 			return candidate.event, len(candidate.sequence), parseDone
 		}
 		if bytes.HasPrefix(candidate.sequence, buf) {
-			return Event{}, 0, parseNeedMore
+			return KeyEvent{}, 0, parseNeedMore
 		}
 	}
 	if buf[1] == '[' {
@@ -92,77 +92,31 @@ func (i *Parser) parseEscEvent(buf []byte) (Event, int, parseStatus) {
 	}
 	if event, n, status := i.parseControlEvent(buf[1:]); status != parseNoMatch {
 		if status != parseDone {
-			return Event{}, 0, status
+			return KeyEvent{}, 0, status
 		}
 		event.Mod |= ModAlt
 		return event, n + 1, parseDone
 	}
 	event, n, status := i.parseRuneEvent(buf[1:])
 	if status != parseDone {
-		return Event{}, 0, status
+		return KeyEvent{}, 0, status
 	}
 	event.Mod |= ModAlt
 	return event, n + 1, parseDone
 }
 
-func (i *Parser) parseCSISequence(buf []byte) (Event, int, parseStatus) {
+func (i *Parser) parseCSISequence(buf []byte) (KeyEvent, int, parseStatus) {
 	finalIdx, ok := findCSIFinal(buf)
 	if !ok {
-		return Event{}, 0, parseNeedMore
+		return KeyEvent{}, 0, parseNeedMore
 	}
 	params := string(buf[2:finalIdx])
 	final := buf[finalIdx]
 	event, ok := eventForCSIFinal(final, params)
 	if !ok {
-		return Event{Code: KeyUnknown}, finalIdx + 1, parseDone
+		return KeyEvent{Code: KeyUnknown}, finalIdx + 1, parseDone
 	}
 	return event, finalIdx + 1, parseDone
-}
-
-func (i *Parser) parseSS3Sequence(buf []byte) (Event, int, parseStatus) {
-	for _, candidate := range ss3Sequences {
-		if bytes.HasPrefix(buf, candidate.sequence) {
-			return candidate.event, len(candidate.sequence), parseDone
-		}
-		if bytes.HasPrefix(candidate.sequence, buf) {
-			return Event{}, 0, parseNeedMore
-		}
-	}
-	return Event{Code: KeyUnknown}, len(ansi.SS3) + 1, parseDone
-}
-
-func (i *Parser) parseControlEvent(buf []byte) (Event, int, parseStatus) {
-	if len(buf) == 0 {
-		return Event{}, 0, parseNeedMore
-	}
-
-	b := buf[0]
-	for _, candidate := range controlBytes {
-		if b == candidate.b {
-			return candidate.event, 1, parseDone
-		}
-	}
-	if b >= 0x01 && b <= 0x1a {
-		r := 'a' + rune(b) - 1
-		return Event{Code: KeyRune, Text: string(r), Mod: ModCtrl}, 1, parseDone
-	}
-	return Event{}, 0, parseNoMatch
-}
-
-func (i *Parser) parseRuneEvent(buf []byte) (Event, int, parseStatus) {
-	if !utf8.FullRune(buf) {
-		return Event{}, 0, parseNeedMore
-	}
-	r, n := utf8.DecodeRune(buf)
-	return Event{
-		Code: KeyRune,
-		Text: string(r),
-		Mod:  ModNone,
-	}, n, parseDone
-}
-
-func (i *Parser) isEscapeByte(b byte) bool {
-	return byte(ansi.ESCAPEByte) == b
 }
 
 func findCSIFinal(buf []byte) (int, bool) {
@@ -174,36 +128,82 @@ func findCSIFinal(buf []byte) (int, bool) {
 	return 0, false
 }
 
-func eventForCSIFinal(final byte, params string) (Event, bool) {
+func (i *Parser) parseSS3Sequence(buf []byte) (KeyEvent, int, parseStatus) {
+	for _, candidate := range ss3Sequences {
+		if bytes.HasPrefix(buf, candidate.sequence) {
+			return candidate.event, len(candidate.sequence), parseDone
+		}
+		if bytes.HasPrefix(candidate.sequence, buf) {
+			return KeyEvent{}, 0, parseNeedMore
+		}
+	}
+	return KeyEvent{Code: KeyUnknown}, len(ansi.SS3) + 1, parseDone
+}
+
+func (i *Parser) parseControlEvent(buf []byte) (KeyEvent, int, parseStatus) {
+	if len(buf) == 0 {
+		return KeyEvent{}, 0, parseNeedMore
+	}
+
+	b := buf[0]
+	for _, candidate := range controlBytes {
+		if b == candidate.b {
+			return candidate.event, 1, parseDone
+		}
+	}
+	if b >= 0x01 && b <= 0x1a {
+		r := 'a' + rune(b) - 1
+		return KeyEvent{Code: KeyRune, Text: string(r), Mod: ModCtrl}, 1, parseDone
+	}
+	return KeyEvent{}, 0, parseNoMatch
+}
+
+func (i *Parser) parseRuneEvent(buf []byte) (KeyEvent, int, parseStatus) {
+	if !utf8.FullRune(buf) {
+		return KeyEvent{}, 0, parseNeedMore
+	}
+	r, n := utf8.DecodeRune(buf)
+	return KeyEvent{
+		Code: KeyRune,
+		Text: string(r),
+		Mod:  ModNone,
+	}, n, parseDone
+}
+
+func (i *Parser) isEscapeByte(b byte) bool {
+	return byte(ansi.ESCAPEByte) == b
+}
+
+func eventForCSIFinal(final byte, params string) (KeyEvent, bool) {
 	switch final {
 	case 'A':
-		return Event{Code: KeyUp, Mod: modFromCSIParams(params)}, true
+		return KeyEvent{Code: KeyUp, Mod: modFromCSIParams(params)}, true
 	case 'B':
-		return Event{Code: KeyDown, Mod: modFromCSIParams(params)}, true
+		return KeyEvent{Code: KeyDown, Mod: modFromCSIParams(params)}, true
 	case 'C':
-		return Event{Code: KeyRight, Mod: modFromCSIParams(params)}, true
+		return KeyEvent{Code: KeyRight, Mod: modFromCSIParams(params)}, true
 	case 'D':
-		return Event{Code: KeyLeft, Mod: modFromCSIParams(params)}, true
+		return KeyEvent{Code: KeyLeft, Mod: modFromCSIParams(params)}, true
 	case 'H':
-		return Event{Code: KeyHome, Mod: modFromCSIParams(params)}, true
+		return KeyEvent{Code: KeyHome, Mod: modFromCSIParams(params)}, true
 	case 'F':
-		return Event{Code: KeyEnd, Mod: modFromCSIParams(params)}, true
+		return KeyEvent{Code: KeyEnd, Mod: modFromCSIParams(params)}, true
 	case 'Z':
-		return Event{Code: KeyTab, Mod: ModShift}, true
+		return KeyEvent{Code: KeyTab, Mod: ModShift}, true
 	case '~':
 		return eventForCSITilde(params)
 	default:
-		return Event{}, false
+		return KeyEvent{}, false
 	}
 }
 
-func eventForCSITilde(params string) (Event, bool) {
+func eventForCSITilde(params string) (KeyEvent, bool) {
 	values := splitCSIParams(params)
 	if len(values) == 0 {
-		return Event{}, false
+		return KeyEvent{}, false
 	}
 
-	event := Event{Code: keyCodeForCSITilde(values[0])}
+	event := KeyEvent{Code: keyCodeForCSITilde(values[0])}
 	if event.Code == KeyUnknown {
 		return event, true
 	}
