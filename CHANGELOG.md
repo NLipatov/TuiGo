@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.1.1](https://github.com/NLipatov/TuiGo/compare/v0.1.0...v0.1.1) (2026-06-04)
+
+
+### Features
+
+* **device:** add IsModeChanged ([4919a8c](https://github.com/NLipatov/TuiGo/commit/4919a8c70eca703e47fb4744f445d22de742f033))
+
+
+### Bug Fixes
+
+* **session:** guard terminal restore lifecycle ([b9a3a6d](https://github.com/NLipatov/TuiGo/commit/b9a3a6d4df9cd7be9419a9dab00137055a71c01d))
+
 ## 0.1.0 (2026-06-01)
 
 
