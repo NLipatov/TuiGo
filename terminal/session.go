@@ -145,20 +145,20 @@ func (s *Session) ansiCommand(command ansi.ANSIEscapeSequence) error {
 func (s *Session) startEventLoop() (chan Event, error) {
 	resizeCh := make(chan resize.Event)
 	resizeListener := resize.NewListener(s.ctx, resizeCh, &s.device)
-	keyCh := make(chan input.KeyEvent)
-	keyListener, err := input.NewListener(s.ctx, s.reader, input.NewParser(), keyCh)
+	inputCh := make(chan input.Event)
+	inputListener, err := input.NewListener(s.ctx, s.reader, input.NewParser(), inputCh)
 	if err != nil {
 		return nil, err
 	}
-	return s.runEventLoop(resizeCh, &resizeListener, keyCh, &keyListener), nil
+	return s.runEventLoop(resizeCh, &resizeListener, inputCh, &inputListener), nil
 }
 
 //nolint:gocognit,cyclop // Keeping cancellation paths explicit is clearer than splitting this event loop into helpers.
 func (s *Session) runEventLoop(
 	resizeCh <-chan resize.Event,
 	resizeListener eventListener,
-	keyCh <-chan input.KeyEvent,
-	keyListener eventListener,
+	inputCh <-chan input.Event,
+	inputListener eventListener,
 ) chan Event {
 	outCh := make(chan Event)
 	errCh := make(chan error, 2)
@@ -192,17 +192,18 @@ func (s *Session) runEventLoop(
 					Resize: event,
 				}:
 				}
-			case event, ok := <-keyCh:
+			case event, ok := <-inputCh:
 				if !ok {
 					return
+				}
+				terminalEvent, ok := newEventFromInput(event)
+				if !ok {
+					continue
 				}
 				select {
 				case <-s.ctx.Done():
 					return
-				case outCh <- Event{
-					Type: EventKey,
-					Key:  event,
-				}:
+				case outCh <- terminalEvent:
 				}
 			}
 		}
@@ -220,7 +221,7 @@ func (s *Session) runEventLoop(
 		}
 	}()
 	go func() {
-		if err := keyListener.Listen(); err != nil {
+		if err := inputListener.Listen(); err != nil {
 			if s.ctx.Err() != nil {
 				return
 			}

@@ -22,3 +22,20 @@ type Event struct {
 	Mouse  input.MouseEvent
 	Resize resize.Event
 }
+
+func newEventFromInput(in input.Event) (Event, bool) {
+	switch in.Type {
+	case input.EventTypeKey:
+		return Event{
+			Type: EventKey,
+			Key:  in.Key,
+		}, true
+	case input.EventTypeMouse:
+		return Event{
+			Type:  EventMouse,
+			Mouse: in.Mouse,
+		}, true
+	default:
+		return Event{}, false
+	}
+}

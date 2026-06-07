@@ -112,9 +112,9 @@ func TestSessionEventLoopForwardsInputAndResizeEvents(t *testing.T) {
 
 	session := Session{ctx: ctx}
 	resizeCh := make(chan resize.Event, 1)
-	keyCh := make(chan input.KeyEvent, 1)
+	inputCh := make(chan input.Event, 1)
 	listener := contextCanceledListener(ctx)
-	events := session.runEventLoop(resizeCh, listener, keyCh, listener)
+	events := session.runEventLoop(resizeCh, listener, inputCh, listener)
 
 	resizeEvent := resize.Event{Width: 100, Height: 40}
 	resizeCh <- resizeEvent
@@ -127,13 +127,29 @@ func TestSessionEventLoopForwardsInputAndResizeEvents(t *testing.T) {
 	}
 
 	keyEvent := input.KeyEvent{Code: input.KeyCode(1), Text: "a", Mod: input.ModCtrl}
-	keyCh <- keyEvent
+	inputCh <- input.Event{Type: input.EventTypeKey, Key: keyEvent}
 	got = receiveSessionEvent(t, events)
 	if got.Type != EventKey {
 		t.Fatalf("event type = %v, want %v", got.Type, EventKey)
 	}
 	if got.Key != keyEvent {
 		t.Fatalf("key event = %#v, want %#v", got.Key, keyEvent)
+	}
+
+	mouseEvent := input.MouseEvent{
+		X:      10,
+		Y:      20,
+		Button: input.MouseButtonLeft,
+		Action: input.MouseActionPress,
+		Mod:    input.ModShift,
+	}
+	inputCh <- input.Event{Type: input.EventTypeMouse, Mouse: mouseEvent}
+	got = receiveSessionEvent(t, events)
+	if got.Type != EventMouse {
+		t.Fatalf("event type = %v, want %v", got.Type, EventMouse)
+	}
+	if got.Mouse != mouseEvent {
+		t.Fatalf("mouse event = %#v, want %#v", got.Mouse, mouseEvent)
 	}
 }
 
@@ -175,7 +191,7 @@ func TestSessionEventLoopEmitsListenerErrors(t *testing.T) {
 			events := session.runEventLoop(
 				make(chan resize.Event),
 				resizeListener,
-				make(chan input.KeyEvent),
+				make(chan input.Event),
 				keyListener,
 			)
 
@@ -197,7 +213,7 @@ func TestSessionEventLoopDoesNotEmitErrorOnContextCancel(t *testing.T) {
 	events := session.runEventLoop(
 		make(chan resize.Event),
 		listener,
-		make(chan input.KeyEvent),
+		make(chan input.Event),
 		listener,
 	)
 

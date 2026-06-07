@@ -202,8 +202,9 @@ func assertEvents(t *testing.T, got ParseResult, want []KeyEvent) {
 		t.Fatalf("events = %#v, want %#v", got, want)
 	}
 	for i := range want {
-		if got.Events[i] != want[i] {
-			t.Fatalf("event %d = %#v, want %#v", i, got.Events[i], want[i])
+		wantEvent := Event{Type: EventTypeKey, Key: want[i]}
+		if got.Events[i] != wantEvent {
+			t.Fatalf("event %d = %#v, want %#v", i, got.Events[i], wantEvent)
 		}
 	}
 }

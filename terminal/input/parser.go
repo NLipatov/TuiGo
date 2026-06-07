@@ -28,13 +28,16 @@ func (i *Parser) FlushPendingEscape() ParseResult {
 	rest := append([]byte(nil), i.buf[1:]...)
 	i.buf = i.buf[:0]
 	result := i.Feed(rest)
-	result.Events = append([]KeyEvent{{Code: KeyEsc}}, result.Events...)
+	result.Events = append([]Event{{
+		Type: EventTypeKey,
+		Key:  KeyEvent{Code: KeyEsc},
+	}}, result.Events...)
 	return result
 }
 
 func (i *Parser) Feed(buf []byte) ParseResult {
 	i.buf = append(i.buf, buf...)
-	events := make([]KeyEvent, 0)
+	events := make([]Event, 0)
 	for len(i.buf) > 0 {
 		event, n, status := i.parseEvent(i.buf)
 		if status != parseDone {
@@ -53,35 +56,36 @@ func (i *Parser) hasPendingEscape() bool {
 	return len(i.buf) > 0 && i.isEscapeByte(i.buf[0])
 }
 
-func (i *Parser) parseEvent(buf []byte) (KeyEvent, int, parseStatus) {
+func (i *Parser) parseEvent(buf []byte) (Event, int, parseStatus) {
 	if len(buf) == 0 {
-		return KeyEvent{}, 0, parseNeedMore
+		return Event{}, 0, parseNeedMore
 	}
 	if event, n, status := i.parseEscEvent(buf); status != parseNoMatch {
 		return event, n, status
 	}
 	if event, n, status := i.parseControlEvent(buf); status != parseNoMatch {
-		return event, n, status
+		return Event{Type: EventTypeKey, Key: event}, n, status
 	}
-	return i.parseRuneEvent(buf)
+	event, n, status := i.parseRuneEvent(buf)
+	return Event{Type: EventTypeKey, Key: event}, n, status
 }
 
-func (i *Parser) parseEscEvent(buf []byte) (KeyEvent, int, parseStatus) {
+func (i *Parser) parseEscEvent(buf []byte) (Event, int, parseStatus) {
 	if len(buf) == 0 {
-		return KeyEvent{}, 0, parseNeedMore
+		return Event{}, 0, parseNeedMore
 	}
 	if !i.isEscapeByte(buf[0]) {
-		return KeyEvent{}, 0, parseNoMatch
+		return Event{}, 0, parseNoMatch
 	}
 	if len(buf) == 1 {
-		return KeyEvent{}, 0, parseNeedMore
+		return Event{}, 0, parseNeedMore
 	}
 	for _, candidate := range escapeSequences {
 		if bytes.HasPrefix(buf, candidate.sequence) {
-			return candidate.event, len(candidate.sequence), parseDone
+			return Event{Type: EventTypeKey, Key: candidate.event}, len(candidate.sequence), parseDone
 		}
 		if bytes.HasPrefix(candidate.sequence, buf) {
-			return KeyEvent{}, 0, parseNeedMore
+			return Event{}, 0, parseNeedMore
 		}
 	}
 	if buf[1] == '[' {
@@ -92,31 +96,31 @@ func (i *Parser) parseEscEvent(buf []byte) (KeyEvent, int, parseStatus) {
 	}
 	if event, n, status := i.parseControlEvent(buf[1:]); status != parseNoMatch {
 		if status != parseDone {
-			return KeyEvent{}, 0, status
+			return Event{}, 0, status
 		}
 		event.Mod |= ModAlt
-		return event, n + 1, parseDone
+		return Event{Type: EventTypeKey, Key: event}, n + 1, parseDone
 	}
 	event, n, status := i.parseRuneEvent(buf[1:])
 	if status != parseDone {
-		return KeyEvent{}, 0, status
+		return Event{}, 0, status
 	}
 	event.Mod |= ModAlt
-	return event, n + 1, parseDone
+	return Event{Type: EventTypeKey, Key: event}, n + 1, parseDone
 }
 
-func (i *Parser) parseCSISequence(buf []byte) (KeyEvent, int, parseStatus) {
+func (i *Parser) parseCSISequence(buf []byte) (Event, int, parseStatus) {
 	finalIdx, ok := findCSIFinal(buf)
 	if !ok {
-		return KeyEvent{}, 0, parseNeedMore
+		return Event{}, 0, parseNeedMore
 	}
 	params := string(buf[2:finalIdx])
 	final := buf[finalIdx]
 	event, ok := eventForCSIFinal(final, params)
 	if !ok {
-		return KeyEvent{Code: KeyUnknown}, finalIdx + 1, parseDone
+		return Event{Type: EventTypeKey, Key: KeyEvent{Code: KeyUnknown}}, finalIdx + 1, parseDone
 	}
-	return event, finalIdx + 1, parseDone
+	return Event{Type: EventTypeKey, Key: event}, finalIdx + 1, parseDone
 }
 
 func findCSIFinal(buf []byte) (int, bool) {
@@ -128,16 +132,16 @@ func findCSIFinal(buf []byte) (int, bool) {
 	return 0, false
 }
 
-func (i *Parser) parseSS3Sequence(buf []byte) (KeyEvent, int, parseStatus) {
+func (i *Parser) parseSS3Sequence(buf []byte) (Event, int, parseStatus) {
 	for _, candidate := range ss3Sequences {
 		if bytes.HasPrefix(buf, candidate.sequence) {
-			return candidate.event, len(candidate.sequence), parseDone
+			return Event{Type: EventTypeKey, Key: candidate.event}, len(candidate.sequence), parseDone
 		}
 		if bytes.HasPrefix(candidate.sequence, buf) {
-			return KeyEvent{}, 0, parseNeedMore
+			return Event{}, 0, parseNeedMore
 		}
 	}
-	return KeyEvent{Code: KeyUnknown}, len(ansi.SS3) + 1, parseDone
+	return Event{Type: EventTypeKey, Key: KeyEvent{Code: KeyUnknown}}, len(ansi.SS3) + 1, parseDone
 }
 
 func (i *Parser) parseControlEvent(buf []byte) (KeyEvent, int, parseStatus) {
