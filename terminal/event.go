@@ -11,6 +11,7 @@ const (
 	EventUnknown EventType = iota
 	EventResize
 	EventKey
+	EventMouse
 	EventError
 )
 
@@ -18,5 +19,6 @@ type Event struct {
 	Type   EventType
 	Err    error
 	Key    input.KeyEvent
+	Mouse  input.MouseEvent
 	Resize resize.Event
 }
