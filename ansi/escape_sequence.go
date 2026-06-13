@@ -20,6 +20,12 @@ const (
 	SHOW_CURSOR                   ANSIEscapeSequence = CSI + "?25h"
 	ENTER_ALTERNATE_SCREEN        ANSIEscapeSequence = CSI + "?1049h"
 	EXIT_ALTERNATE_SCREEN         ANSIEscapeSequence = CSI + "?1049l"
+	ENABLE_MOUSE_REPORTING        ANSIEscapeSequence = CSI + "?1000h"
+	DISABLE_MOUSE_REPORTING       ANSIEscapeSequence = CSI + "?1000l"
+	ENABLE_MOUSE_DRAG             ANSIEscapeSequence = CSI + "?1002h"
+	DISABLE_MOUSE_DRAG            ANSIEscapeSequence = CSI + "?1002l"
+	ENABLE_SGR_MOUSE              ANSIEscapeSequence = CSI + "?1006h"
+	DISABLE_SGR_MOUSE             ANSIEscapeSequence = CSI + "?1006l"
 	FG_BLACK                      ANSIEscapeSequence = CSI + "0;30m"
 	FG_RED                        ANSIEscapeSequence = CSI + "0;31m"
 	FG_GREEN                      ANSIEscapeSequence = CSI + "0;32m"
@@ -107,7 +113,9 @@ func (c ANSIEscapeSequence) IsValid() bool {
 func (c ANSIEscapeSequence) IsCommand() bool {
 	switch c {
 	case RESET, CLEAR_SCREEN, CLEAR_SCROLLBACK, CURSOR_HOME, HIDE_CURSOR,
-		SHOW_CURSOR, ENTER_ALTERNATE_SCREEN, EXIT_ALTERNATE_SCREEN:
+		SHOW_CURSOR, ENTER_ALTERNATE_SCREEN, EXIT_ALTERNATE_SCREEN,
+		ENABLE_MOUSE_REPORTING, DISABLE_MOUSE_REPORTING, ENABLE_MOUSE_DRAG,
+		DISABLE_MOUSE_DRAG, ENABLE_SGR_MOUSE, DISABLE_SGR_MOUSE:
 		return true
 	default:
 		return false

@@ -108,6 +108,15 @@ func (s *Session) setupTerminal() error {
 	if err := s.ansiCommand(ansi.HIDE_CURSOR); err != nil {
 		return err
 	}
+	if err := s.ansiCommand(ansi.ENABLE_MOUSE_REPORTING); err != nil {
+		return err
+	}
+	if err := s.ansiCommand(ansi.ENABLE_MOUSE_DRAG); err != nil {
+		return err
+	}
+	if err := s.ansiCommand(ansi.ENABLE_SGR_MOUSE); err != nil {
+		return err
+	}
 	if err := s.ansiCommand(ansi.CLEAR_SCREEN); err != nil {
 		return err
 	}
@@ -118,6 +127,15 @@ func (s *Session) setupTerminal() error {
 }
 
 func (s *Session) restoreTerminal() error {
+	if err := s.ansiCommand(ansi.DISABLE_SGR_MOUSE); err != nil {
+		return err
+	}
+	if err := s.ansiCommand(ansi.DISABLE_MOUSE_DRAG); err != nil {
+		return err
+	}
+	if err := s.ansiCommand(ansi.DISABLE_MOUSE_REPORTING); err != nil {
+		return err
+	}
 	if err := s.ansiCommand(ansi.RESET); err != nil {
 		return err
 	}

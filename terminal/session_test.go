@@ -100,7 +100,12 @@ func TestSessionStartRestoresTerminalOnSetupError(t *testing.T) {
 		t.Fatalf("Start() error = %v, want wrapped %v", err, setupErr)
 	}
 
-	want := string(ansi.RESET) + string(ansi.SHOW_CURSOR) + string(ansi.EXIT_ALTERNATE_SCREEN)
+	want := string(ansi.DISABLE_SGR_MOUSE) +
+		string(ansi.DISABLE_MOUSE_DRAG) +
+		string(ansi.DISABLE_MOUSE_REPORTING) +
+		string(ansi.RESET) +
+		string(ansi.SHOW_CURSOR) +
+		string(ansi.EXIT_ALTERNATE_SCREEN)
 	if got := writer.out.String(); got != want {
 		t.Fatalf("session output = %q, want restore commands %q", got, want)
 	}
