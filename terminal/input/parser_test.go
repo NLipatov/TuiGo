@@ -188,6 +188,121 @@ func TestParserParsesCSIModifiers(t *testing.T) {
 	}
 }
 
+func TestParserParsesSGRMouseEvents(t *testing.T) {
+	tests := []struct {
+		name string
+		in   []byte
+		want MouseEvent
+	}{
+		{
+			name: "left press",
+			in:   []byte("\x1b[<0;10;5M"),
+			want: MouseEvent{X: 9, Y: 4, Button: MouseButtonLeft, Action: MouseActionPress},
+		},
+		{
+			name: "middle press",
+			in:   []byte("\x1b[<1;10;5M"),
+			want: MouseEvent{X: 9, Y: 4, Button: MouseButtonMiddle, Action: MouseActionPress},
+		},
+		{
+			name: "right press",
+			in:   []byte("\x1b[<2;10;5M"),
+			want: MouseEvent{X: 9, Y: 4, Button: MouseButtonRight, Action: MouseActionPress},
+		},
+		{
+			name: "release",
+			in:   []byte("\x1b[<0;10;5m"),
+			want: MouseEvent{X: 9, Y: 4, Button: MouseButtonLeft, Action: MouseActionRelease},
+		},
+		{
+			name: "drag",
+			in:   []byte("\x1b[<32;10;5M"),
+			want: MouseEvent{X: 9, Y: 4, Button: MouseButtonLeft, Action: MouseActionDrag},
+		},
+		{
+			name: "wheel up",
+			in:   []byte("\x1b[<64;10;5M"),
+			want: MouseEvent{X: 9, Y: 4, Button: MouseButtonWheelUp, Action: MouseActionWheel},
+		},
+		{
+			name: "wheel down",
+			in:   []byte("\x1b[<65;10;5M"),
+			want: MouseEvent{X: 9, Y: 4, Button: MouseButtonWheelDown, Action: MouseActionWheel},
+		},
+		{
+			name: "modifiers",
+			in:   []byte("\x1b[<28;10;5M"),
+			want: MouseEvent{
+				X:      9,
+				Y:      4,
+				Button: MouseButtonLeft,
+				Action: MouseActionPress,
+				Mod:    ModShift | ModAlt | ModCtrl,
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			parser := NewParser()
+			got := parser.Feed(tt.in)
+			assertInputEvents(t, got, []Event{{Type: EventTypeMouse, Mouse: tt.want}})
+		})
+	}
+}
+
+func TestParserParsesSplitSGRMouseEvent(t *testing.T) {
+	parser := NewParser()
+
+	got := parser.Feed([]byte("\x1b[<0;10"))
+	assertInputEvents(t, got, nil)
+	if !got.HasPendingEscape {
+		t.Fatalf("HasPendingEscape = false, want true")
+	}
+
+	got = parser.Feed([]byte(";5M"))
+	assertInputEvents(t, got, []Event{{
+		Type: EventTypeMouse,
+		Mouse: MouseEvent{
+			X:      9,
+			Y:      4,
+			Button: MouseButtonLeft,
+			Action: MouseActionPress,
+		},
+	}})
+	if got.HasPendingEscape {
+		t.Fatalf("HasPendingEscape = true, want false")
+	}
+}
+
+func TestParserParsesSGRMouseEventBeforeFollowingInput(t *testing.T) {
+	parser := NewParser()
+
+	got := parser.Feed([]byte("\x1b[<64;10;5Ma"))
+	assertInputEvents(t, got, []Event{
+		{
+			Type: EventTypeMouse,
+			Mouse: MouseEvent{
+				X:      9,
+				Y:      4,
+				Button: MouseButtonWheelUp,
+				Action: MouseActionWheel,
+			},
+		},
+		{
+			Type: EventTypeKey,
+			Key:  KeyEvent{Code: KeyRune, Text: "a", Mod: ModNone},
+		},
+	})
+}
+
+func TestParserParsesMalformedSGRMouseEventAsUnknownKey(t *testing.T) {
+	parser := NewParser()
+
+	got := parser.Feed([]byte("\x1b[<0;10M"))
+	assertEvents(t, got, []KeyEvent{{Code: KeyUnknown}})
+}
+
 func TestParserParsesUnknownCSISequence(t *testing.T) {
 	parser := NewParser()
 
@@ -198,13 +313,22 @@ func TestParserParsesUnknownCSISequence(t *testing.T) {
 func assertEvents(t *testing.T, got ParseResult, want []KeyEvent) {
 	t.Helper()
 
+	events := make([]Event, 0, len(want))
+	for _, event := range want {
+		events = append(events, Event{Type: EventTypeKey, Key: event})
+	}
+	assertInputEvents(t, got, events)
+}
+
+func assertInputEvents(t *testing.T, got ParseResult, want []Event) {
+	t.Helper()
+
 	if len(got.Events) != len(want) {
 		t.Fatalf("events = %#v, want %#v", got, want)
 	}
 	for i := range want {
-		wantEvent := Event{Type: EventTypeKey, Key: want[i]}
-		if got.Events[i] != wantEvent {
-			t.Fatalf("event %d = %#v, want %#v", i, got.Events[i], wantEvent)
+		if got.Events[i] != want[i] {
+			t.Fatalf("event %d = %#v, want %#v", i, got.Events[i], want[i])
 		}
 	}
 }
