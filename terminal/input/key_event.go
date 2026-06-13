@@ -1,5 +1,11 @@
 package input
 
+type KeyEvent struct {
+	Code KeyCode
+	Text string
+	Mod  KeyMod
+}
+
 type KeyCode int
 
 const (
@@ -35,4 +41,13 @@ const (
 	KeyF10
 	KeyF11
 	KeyF12
+)
+
+type KeyMod uint8
+
+const (
+	ModNone  KeyMod = 0 // 0000_0000
+	ModCtrl  KeyMod = 1 // 0000_0001
+	ModAlt   KeyMod = 2 // 0000_0010
+	ModShift KeyMod = 4 // 0000_0100
 )

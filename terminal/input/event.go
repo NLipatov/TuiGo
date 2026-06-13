@@ -1,7 +1,15 @@
 package input
 
+type EventType int
+
+const (
+	EventTypeUnknown EventType = iota
+	EventTypeKey
+	EventTypeMouse
+)
+
 type Event struct {
-	Code KeyCode
-	Text string
-	Mod  KeyMod
+	Type  EventType
+	Key   KeyEvent
+	Mouse MouseEvent
 }

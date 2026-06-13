@@ -100,7 +100,12 @@ func TestSessionStartRestoresTerminalOnSetupError(t *testing.T) {
 		t.Fatalf("Start() error = %v, want wrapped %v", err, setupErr)
 	}
 
-	want := string(ansi.RESET) + string(ansi.SHOW_CURSOR) + string(ansi.EXIT_ALTERNATE_SCREEN)
+	want := string(ansi.DISABLE_SGR_MOUSE) +
+		string(ansi.DISABLE_MOUSE_DRAG) +
+		string(ansi.DISABLE_MOUSE_REPORTING) +
+		string(ansi.RESET) +
+		string(ansi.SHOW_CURSOR) +
+		string(ansi.EXIT_ALTERNATE_SCREEN)
 	if got := writer.out.String(); got != want {
 		t.Fatalf("session output = %q, want restore commands %q", got, want)
 	}
@@ -112,9 +117,9 @@ func TestSessionEventLoopForwardsInputAndResizeEvents(t *testing.T) {
 
 	session := Session{ctx: ctx}
 	resizeCh := make(chan resize.Event, 1)
-	keyCh := make(chan input.Event, 1)
+	inputCh := make(chan input.Event, 1)
 	listener := contextCanceledListener(ctx)
-	events := session.runEventLoop(resizeCh, listener, keyCh, listener)
+	events := session.runEventLoop(resizeCh, listener, inputCh, listener)
 
 	resizeEvent := resize.Event{Width: 100, Height: 40}
 	resizeCh <- resizeEvent
@@ -126,14 +131,30 @@ func TestSessionEventLoopForwardsInputAndResizeEvents(t *testing.T) {
 		t.Fatalf("resize event = %#v, want %#v", got.Resize, resizeEvent)
 	}
 
-	keyEvent := input.Event{Code: input.KeyCode(1), Text: "a", Mod: input.ModCtrl}
-	keyCh <- keyEvent
+	keyEvent := input.KeyEvent{Code: input.KeyCode(1), Text: "a", Mod: input.ModCtrl}
+	inputCh <- input.Event{Type: input.EventTypeKey, Key: keyEvent}
 	got = receiveSessionEvent(t, events)
 	if got.Type != EventKey {
 		t.Fatalf("event type = %v, want %v", got.Type, EventKey)
 	}
 	if got.Key != keyEvent {
 		t.Fatalf("key event = %#v, want %#v", got.Key, keyEvent)
+	}
+
+	mouseEvent := input.MouseEvent{
+		X:      10,
+		Y:      20,
+		Button: input.MouseButtonLeft,
+		Action: input.MouseActionPress,
+		Mod:    input.ModShift,
+	}
+	inputCh <- input.Event{Type: input.EventTypeMouse, Mouse: mouseEvent}
+	got = receiveSessionEvent(t, events)
+	if got.Type != EventMouse {
+		t.Fatalf("event type = %v, want %v", got.Type, EventMouse)
+	}
+	if got.Mouse != mouseEvent {
+		t.Fatalf("mouse event = %#v, want %#v", got.Mouse, mouseEvent)
 	}
 }
 
