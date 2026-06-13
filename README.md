@@ -28,6 +28,12 @@ go run ./examples/hello
 
 Press `q`, `Esc`, or `Ctrl+C` to quit.
 
+For a richer visual demo:
+
+```sh
+go run ./examples/demo
+```
+
 ## Usage
 
 ```go
