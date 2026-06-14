@@ -111,6 +111,32 @@ func TestSessionStartRestoresTerminalOnSetupError(t *testing.T) {
 	}
 }
 
+func TestSessionCloseRestoresTerminalBestEffort(t *testing.T) {
+	restoreErr := errors.New("restore failed")
+	writer := failOnceSessionWriter{err: restoreErr}
+	session := Session{
+		writer: &writer,
+		device: Device{
+			fd:           -1,
+			initialState: &term.State{},
+		},
+	}
+
+	err := session.Close()
+	if !errors.Is(err, restoreErr) {
+		t.Fatalf("Close() error = %v, want wrapped %v", err, restoreErr)
+	}
+
+	want := string(ansi.DISABLE_MOUSE_DRAG) +
+		string(ansi.DISABLE_MOUSE_REPORTING) +
+		string(ansi.RESET) +
+		string(ansi.SHOW_CURSOR) +
+		string(ansi.EXIT_ALTERNATE_SCREEN)
+	if got := writer.out.String(); got != want {
+		t.Fatalf("session output = %q, want remaining restore commands %q", got, want)
+	}
+}
+
 func TestSessionEventLoopForwardsInputAndResizeEvents(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()

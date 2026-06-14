@@ -127,28 +127,29 @@ func (s *Session) setupTerminal() error {
 }
 
 func (s *Session) restoreTerminal() error {
+	var restoreErr error
 	if err := s.ansiCommand(ansi.DISABLE_SGR_MOUSE); err != nil {
-		return err
+		restoreErr = errors.Join(restoreErr, err)
 	}
 	if err := s.ansiCommand(ansi.DISABLE_MOUSE_DRAG); err != nil {
-		return err
+		restoreErr = errors.Join(restoreErr, err)
 	}
 	if err := s.ansiCommand(ansi.DISABLE_MOUSE_REPORTING); err != nil {
-		return err
+		restoreErr = errors.Join(restoreErr, err)
 	}
 	if err := s.ansiCommand(ansi.RESET); err != nil {
-		return err
+		restoreErr = errors.Join(restoreErr, err)
 	}
 	if err := s.ansiCommand(ansi.SHOW_CURSOR); err != nil {
-		return err
+		restoreErr = errors.Join(restoreErr, err)
 	}
 	if err := s.ansiCommand(ansi.EXIT_ALTERNATE_SCREEN); err != nil {
-		return err
+		restoreErr = errors.Join(restoreErr, err)
 	}
 	if err := s.device.RestoreInitialMode(); err != nil {
-		return err
+		restoreErr = errors.Join(restoreErr, err)
 	}
-	return nil
+	return restoreErr
 }
 
 func (s *Session) ansiCommand(command ansi.ANSIEscapeSequence) error {
