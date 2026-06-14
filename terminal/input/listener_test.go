@@ -88,15 +88,16 @@ func TestInputListenerListenFeedsParserAndEmitsEvents(t *testing.T) {
 		t.Fatalf("Listen() error = %v, want %v", err, readErr)
 	}
 
-	wantEvents := []Event{
+	wantEvents := []KeyEvent{
 		{Code: KeyRune, Text: "a", Mod: ModNone},
 		{Code: KeyRune, Text: "b", Mod: ModNone},
 		{Code: KeyRune, Text: "c", Mod: ModNone},
 	}
 	for idx, want := range wantEvents {
 		got := <-out
-		if got != want {
-			t.Fatalf("event %d = %#v, want %#v", idx, got, want)
+		wantEvent := Event{Type: EventTypeKey, Key: want}
+		if got != wantEvent {
+			t.Fatalf("event %d = %#v, want %#v", idx, got, wantEvent)
 		}
 	}
 	select {
@@ -123,7 +124,7 @@ func TestInputListenerListenFlushesPendingEscapeAfterTimeout(t *testing.T) {
 	}()
 
 	got := receiveInputEvent(t, out)
-	if want := (Event{Code: KeyEsc}); got != want {
+	if want := (Event{Type: EventTypeKey, Key: KeyEvent{Code: KeyEsc}}); got != want {
 		t.Fatalf("event = %#v, want %#v", got, want)
 	}
 

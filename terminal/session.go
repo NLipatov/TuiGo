@@ -108,6 +108,15 @@ func (s *Session) setupTerminal() error {
 	if err := s.ansiCommand(ansi.HIDE_CURSOR); err != nil {
 		return err
 	}
+	if err := s.ansiCommand(ansi.ENABLE_MOUSE_REPORTING); err != nil {
+		return err
+	}
+	if err := s.ansiCommand(ansi.ENABLE_MOUSE_DRAG); err != nil {
+		return err
+	}
+	if err := s.ansiCommand(ansi.ENABLE_SGR_MOUSE); err != nil {
+		return err
+	}
 	if err := s.ansiCommand(ansi.CLEAR_SCREEN); err != nil {
 		return err
 	}
@@ -118,19 +127,29 @@ func (s *Session) setupTerminal() error {
 }
 
 func (s *Session) restoreTerminal() error {
+	var restoreErr error
+	if err := s.ansiCommand(ansi.DISABLE_SGR_MOUSE); err != nil {
+		restoreErr = errors.Join(restoreErr, err)
+	}
+	if err := s.ansiCommand(ansi.DISABLE_MOUSE_DRAG); err != nil {
+		restoreErr = errors.Join(restoreErr, err)
+	}
+	if err := s.ansiCommand(ansi.DISABLE_MOUSE_REPORTING); err != nil {
+		restoreErr = errors.Join(restoreErr, err)
+	}
 	if err := s.ansiCommand(ansi.RESET); err != nil {
-		return err
+		restoreErr = errors.Join(restoreErr, err)
 	}
 	if err := s.ansiCommand(ansi.SHOW_CURSOR); err != nil {
-		return err
+		restoreErr = errors.Join(restoreErr, err)
 	}
 	if err := s.ansiCommand(ansi.EXIT_ALTERNATE_SCREEN); err != nil {
-		return err
+		restoreErr = errors.Join(restoreErr, err)
 	}
 	if err := s.device.RestoreInitialMode(); err != nil {
-		return err
+		restoreErr = errors.Join(restoreErr, err)
 	}
-	return nil
+	return restoreErr
 }
 
 func (s *Session) ansiCommand(command ansi.ANSIEscapeSequence) error {
@@ -145,20 +164,20 @@ func (s *Session) ansiCommand(command ansi.ANSIEscapeSequence) error {
 func (s *Session) startEventLoop() (chan Event, error) {
 	resizeCh := make(chan resize.Event)
 	resizeListener := resize.NewListener(s.ctx, resizeCh, &s.device)
-	keyCh := make(chan input.Event)
-	keyListener, err := input.NewListener(s.ctx, s.reader, input.NewParser(), keyCh)
+	inputCh := make(chan input.Event)
+	inputListener, err := input.NewListener(s.ctx, s.reader, input.NewParser(), inputCh)
 	if err != nil {
 		return nil, err
 	}
-	return s.runEventLoop(resizeCh, &resizeListener, keyCh, &keyListener), nil
+	return s.runEventLoop(resizeCh, &resizeListener, inputCh, &inputListener), nil
 }
 
 //nolint:gocognit,cyclop // Keeping cancellation paths explicit is clearer than splitting this event loop into helpers.
 func (s *Session) runEventLoop(
 	resizeCh <-chan resize.Event,
 	resizeListener eventListener,
-	keyCh <-chan input.Event,
-	keyListener eventListener,
+	inputCh <-chan input.Event,
+	inputListener eventListener,
 ) chan Event {
 	outCh := make(chan Event)
 	errCh := make(chan error, 2)
@@ -192,17 +211,18 @@ func (s *Session) runEventLoop(
 					Resize: event,
 				}:
 				}
-			case event, ok := <-keyCh:
+			case event, ok := <-inputCh:
 				if !ok {
 					return
+				}
+				terminalEvent, ok := newEventFromInput(event)
+				if !ok {
+					continue
 				}
 				select {
 				case <-s.ctx.Done():
 					return
-				case outCh <- Event{
-					Type: EventKey,
-					Key:  event,
-				}:
+				case outCh <- terminalEvent:
 				}
 			}
 		}
@@ -220,7 +240,7 @@ func (s *Session) runEventLoop(
 		}
 	}()
 	go func() {
-		if err := keyListener.Listen(); err != nil {
+		if err := inputListener.Listen(); err != nil {
 			if s.ctx.Err() != nil {
 				return
 			}
