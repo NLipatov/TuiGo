@@ -1,84 +1,112 @@
 # tuigo
 
-Frame-based terminal UI runtime for Go.
+Blazing fast, zero-allocation TUI renderer for Go.
 
-tuigo is a lightweight, low-level runtime for applications that want to own
-their UI architecture. It provides terminal setup, keyboard, mouse, and resize
-events, and buffered diff rendering. The application owns state, layout,
-widgets, and frame construction.
+## Benchmarks
 
-Note: tuigo is pre-v1.0. Public APIs may change between minor releases.
+| Workload, frame time | tuigo | vaxis | tcell |
+|---|---:|---:|---:|
+| 1 dirty cell | **12.26 us, 0 allocs** | 34.41 us, 0 allocs | 68.78 us, 4 allocs |
+| 5% dirty cells | **18.94 us, 0 allocs** | 43.68 us, 0 allocs | 89.12 us, 960 allocs |
+| Full frame change | **44.21 us, 0 allocs** | 87.33 us, 0 allocs | 440.4 us, 19.20k allocs |
 
-## Why tuigo
+120x40 cells, Go 1.26.3, Apple M4 Pro, `-cpu=1`, `-count=20`.
+Renderer workloads; terminal paint is not measured.
 
-- performance-oriented buffered diff rendering;
-- explicit `Frame -> Render` model;
-- single dependency: `golang.org/x/term`;
-- no framework-managed lifecycle or state;
-- direct event consumption;
-- application-owned state, layout, widgets, and redraw policy.
+Reproduce:
+
+```sh
+cd benchmarks
+go test -run=^$ -bench=BenchmarkRenderer -benchmem -count=20 -benchtime=1s -cpu=1 ./... > results.txt
+go run golang.org/x/perf/cmd/benchstat@v0.0.0-20260610192853-712aea8b4705 results.txt
+```
+
+## Features
+
+- `Frame -> Render` model
+- zero allocations with reused frame buffers
+- keyboard, mouse, resize events
+- ANSI diff output
+- one runtime dependency: `golang.org/x/term`
+
+## Install
+
+```sh
+go get github.com/NLipatov/tuigo/terminal
+```
 
 ## Demo
 
-From the repository root:
-
 ```sh
-go run ./examples/hello
+go run ./examples/demo   # rich demo
+go run ./examples/hello  # minimal example
 ```
 
 Press `q`, `Esc`, or `Ctrl+C` to quit.
 
-For a richer visual demo:
-
-```sh
-go run ./examples/demo
-```
-
 ## Usage
 
+Pre-v1.0: public APIs may change between minor releases.
+
 ```go
+import (
+	"context"
+	"os"
+
+	"github.com/NLipatov/tuigo/terminal"
+)
+
 ctx, cancel := context.WithCancel(context.Background())
 defer cancel()
 
 session, err := terminal.NewSession(ctx, os.Stdin, os.Stdout)
+if err != nil {
+	return err
+}
+defer func() {
+	_ = session.Close()
+}()
+
 events, err := session.Start()
-defer session.Close()
+if err != nil {
+	return err
+}
 
 width, height, err := session.Size()
+if err != nil {
+	return err
+}
+
 frame := buildFrame(width, height)
-err = session.Render(frame)
+if err := session.Render(frame); err != nil {
+	return err
+}
 
 for event := range events {
 	switch event.Type {
 	case terminal.EventKey:
-		// update application state
+		// update state from event.Key
 	case terminal.EventMouse:
-		// update application state from event.Mouse
+		// update state from event.Mouse
 	case terminal.EventResize:
-		// rebuild and render a frame for event.Resize.Width/Height
+		// rebuild and render for event.Resize.Width/Height
 	case terminal.EventError:
 		// decide whether to stop
 	}
 }
 ```
 
-`core.Frame` represents a width x height grid backed by a flat slice of
-`core.Cell` values. Each cell has a rune, foreground color, and background
-color.
+## Frame Buffers
 
-## Frame buffers
-
-To improve rendering performance, use two preallocated frame buffers: the
-current frame and the next frame. Allocate both `[]core.Cell` buffers when the
-terminal size changes, mutate the next buffer, wrap it with `core.NewFrame`, and
-call `Render`. After a successful render, swap the current and next buffers. Do
-not mutate the buffer from the last successful `Render` call until another
-buffer has been rendered successfully.
+For zero-allocation rendering, reuse two cell buffers: current and next. Draw
+into next, render it, then swap.
 
 ```go
-current, next := make([]core.Cell, width*height), make([]core.Cell, width*height)
+current := make([]core.Cell, width*height)
+next := make([]core.Cell, width*height)
 
 draw(next, width, height, state)
+
 frame, err := core.NewFrame(width, height, next)
 if err != nil {
 	return err
@@ -86,5 +114,6 @@ if err != nil {
 if err := session.Render(frame); err != nil {
 	return err
 }
+
 current, next = next, current
 ```
