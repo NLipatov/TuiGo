@@ -108,6 +108,9 @@ func (i *Parser) parseEscEvent(buf []byte) (Event, int, parseStatus) {
 }
 
 func (i *Parser) parseCSISequence(buf []byte) (Event, int, parseStatus) {
+	if event, n, status := legacyMouseEventFromCSI(buf); status != parseNoMatch {
+		return event, n, status
+	}
 	finalIdx, ok := findCSIFinal(buf)
 	if !ok {
 		return Event{}, 0, parseNeedMore

@@ -296,6 +296,121 @@ func TestParserParsesSGRMouseEventBeforeFollowingInput(t *testing.T) {
 	})
 }
 
+func TestParserParsesLegacyMouseEvents(t *testing.T) {
+	tests := []struct {
+		name string
+		in   []byte
+		want MouseEvent
+	}{
+		{
+			name: "left press",
+			in:   legacyMouseInput(0, 10, 5),
+			want: MouseEvent{X: 9, Y: 4, Button: MouseButtonLeft, Action: MouseActionPress},
+		},
+		{
+			name: "middle press",
+			in:   legacyMouseInput(1, 10, 5),
+			want: MouseEvent{X: 9, Y: 4, Button: MouseButtonMiddle, Action: MouseActionPress},
+		},
+		{
+			name: "right press",
+			in:   legacyMouseInput(2, 10, 5),
+			want: MouseEvent{X: 9, Y: 4, Button: MouseButtonRight, Action: MouseActionPress},
+		},
+		{
+			name: "release",
+			in:   legacyMouseInput(3, 10, 5),
+			want: MouseEvent{X: 9, Y: 4, Button: MouseButtonUnknown, Action: MouseActionRelease},
+		},
+		{
+			name: "drag",
+			in:   legacyMouseInput(32, 10, 5),
+			want: MouseEvent{X: 9, Y: 4, Button: MouseButtonLeft, Action: MouseActionDrag},
+		},
+		{
+			name: "wheel up",
+			in:   legacyMouseInput(64, 10, 5),
+			want: MouseEvent{X: 9, Y: 4, Button: MouseButtonWheelUp, Action: MouseActionWheel},
+		},
+		{
+			name: "wheel down",
+			in:   legacyMouseInput(65, 10, 5),
+			want: MouseEvent{X: 9, Y: 4, Button: MouseButtonWheelDown, Action: MouseActionWheel},
+		},
+		{
+			name: "modifiers",
+			in:   legacyMouseInput(28, 10, 5),
+			want: MouseEvent{
+				X:      9,
+				Y:      4,
+				Button: MouseButtonLeft,
+				Action: MouseActionPress,
+				Mod:    ModShift | ModAlt | ModCtrl,
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			parser := NewParser()
+			got := parser.Feed(tt.in)
+			assertInputEvents(t, got, []Event{{Type: EventTypeMouse, Mouse: tt.want}})
+		})
+	}
+}
+
+func TestParserParsesSplitLegacyMouseEvent(t *testing.T) {
+	parser := NewParser()
+
+	got := parser.Feed([]byte("\x1b[M"))
+	assertInputEvents(t, got, nil)
+	if !got.HasPendingEscape {
+		t.Fatalf("HasPendingEscape = false, want true")
+	}
+
+	got = parser.Feed(legacyMouseInputTail(0, 10, 5))
+	assertInputEvents(t, got, []Event{{
+		Type: EventTypeMouse,
+		Mouse: MouseEvent{
+			X:      9,
+			Y:      4,
+			Button: MouseButtonLeft,
+			Action: MouseActionPress,
+		},
+	}})
+	if got.HasPendingEscape {
+		t.Fatalf("HasPendingEscape = true, want false")
+	}
+}
+
+func TestParserParsesLegacyMouseEventBeforeFollowingInput(t *testing.T) {
+	parser := NewParser()
+
+	got := parser.Feed(append(legacyMouseInput(64, 10, 5), 'a'))
+	assertInputEvents(t, got, []Event{
+		{
+			Type: EventTypeMouse,
+			Mouse: MouseEvent{
+				X:      9,
+				Y:      4,
+				Button: MouseButtonWheelUp,
+				Action: MouseActionWheel,
+			},
+		},
+		{
+			Type: EventTypeKey,
+			Key:  KeyEvent{Code: KeyRune, Text: "a", Mod: ModNone},
+		},
+	})
+}
+
+func TestParserParsesMalformedLegacyMouseEventAsUnknownKey(t *testing.T) {
+	parser := NewParser()
+
+	got := parser.Feed([]byte{'\x1b', '[', 'M', 32, 32, 32})
+	assertEvents(t, got, []KeyEvent{{Code: KeyUnknown}})
+}
+
 func TestParserParsesMalformedSGRMouseEventAsUnknownKey(t *testing.T) {
 	parser := NewParser()
 
@@ -331,4 +446,12 @@ func assertInputEvents(t *testing.T, got ParseResult, want []Event) {
 			t.Fatalf("event %d = %#v, want %#v", i, got.Events[i], want[i])
 		}
 	}
+}
+
+func legacyMouseInput(code, x, y int) []byte {
+	return append([]byte{'\x1b', '[', 'M'}, legacyMouseInputTail(code, x, y)...)
+}
+
+func legacyMouseInputTail(code, x, y int) []byte {
+	return []byte{byte(code + 32), byte(x + 32), byte(y + 32)}
 }

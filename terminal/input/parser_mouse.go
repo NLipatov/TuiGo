@@ -12,6 +12,10 @@ const (
 	sgrMouseCtrlMask   = 0b10000
 	sgrMouseDragMask   = 0b100000
 	sgrMouseWheelMask  = 0b1000000
+
+	legacyMouseFinal        = 'M'
+	legacyMouseSequenceLen  = 6
+	legacyMouseEncodingBase = 32
 )
 
 func isSGRMouseSequence(params string, final byte) bool {
@@ -89,4 +93,59 @@ func mouseModFromSGR(code int) KeyMod {
 		mod |= ModCtrl
 	}
 	return mod
+}
+
+func legacyMouseEventFromCSI(buf []byte) (Event, int, parseStatus) {
+	if len(buf) < len("\x1b[M") || buf[2] != legacyMouseFinal {
+		return Event{}, 0, parseNoMatch
+	}
+	if len(buf) < legacyMouseSequenceLen {
+		return Event{}, 0, parseNeedMore
+	}
+
+	mouse, ok := mouseEventFromLegacy(buf[3], buf[4], buf[5])
+	if !ok {
+		return Event{Type: EventTypeKey, Key: KeyEvent{Code: KeyUnknown}}, legacyMouseSequenceLen, parseDone
+	}
+	return Event{Type: EventTypeMouse, Mouse: mouse}, legacyMouseSequenceLen, parseDone
+}
+
+func mouseEventFromLegacy(codeByte, xByte, yByte byte) (MouseEvent, bool) {
+	code := int(codeByte) - legacyMouseEncodingBase
+	x := int(xByte) - legacyMouseEncodingBase - 1
+	y := int(yByte) - legacyMouseEncodingBase - 1
+	if code < 0 || x < 0 || y < 0 {
+		return MouseEvent{}, false
+	}
+
+	return MouseEvent{
+		X:      x,
+		Y:      y,
+		Button: mouseButtonFromLegacy(code),
+		Action: mouseActionFromLegacy(code),
+		Mod:    mouseModFromSGR(code),
+	}, true
+}
+
+func mouseButtonFromLegacy(code int) MouseButton {
+	if code&sgrMouseWheelMask != 0 {
+		return mouseButtonFromSGR(code)
+	}
+	if code&sgrMouseButtonMask == sgrMouseButtonMask {
+		return MouseButtonUnknown
+	}
+	return mouseButtonFromSGR(code)
+}
+
+func mouseActionFromLegacy(code int) MouseAction {
+	if code&sgrMouseWheelMask != 0 {
+		return MouseActionWheel
+	}
+	if code&sgrMouseButtonMask == sgrMouseButtonMask {
+		return MouseActionRelease
+	}
+	if code&sgrMouseDragMask != 0 {
+		return MouseActionDrag
+	}
+	return MouseActionPress
 }
