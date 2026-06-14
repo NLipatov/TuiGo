@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.2](https://github.com/NLipatov/TuiGo/compare/v0.1.1...v0.1.2) (2026-06-14)
+
+
+### Bug Fixes
+
+* **deps:** update Go dependencies ([#8](https://github.com/NLipatov/TuiGo/issues/8)) ([84d901f](https://github.com/NLipatov/TuiGo/commit/84d901fb61db9237e2010e579c18ba7fbe4565b5))
+
 ## [0.1.1](https://github.com/NLipatov/TuiGo/compare/v0.1.0...v0.1.1) (2026-06-04)
 
 
