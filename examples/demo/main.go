@@ -442,14 +442,16 @@ func putCell(cells []core.Cell, width, height, x, y int, cell core.Cell) {
 }
 
 func keyLabel(event input.KeyEvent) string {
+	var text string
 	if event.Code == input.KeyRune {
-		text := keyTextLabel(event.Text)
-		if event.Mod == input.ModNone {
-			return text
-		}
-		return modLabel(event.Mod) + "+" + text
+		text = keyTextLabel(event.Text)
+	} else {
+		text = keyCodeLabel(event.Code)
 	}
-	return keyCodeLabel(event.Code)
+	if event.Mod == input.ModNone {
+		return text
+	}
+	return modLabel(event.Mod) + "+" + text
 }
 
 func keyCodeLabel(code input.KeyCode) string {
