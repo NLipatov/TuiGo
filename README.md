@@ -3,9 +3,9 @@
 Frame-based terminal UI runtime for Go.
 
 tuigo is a lightweight, low-level runtime for applications that want to own
-their UI architecture. It provides terminal setup, input and resize events, and
-buffered diff rendering. The application owns state, layout, widgets, and frame
-construction.
+their UI architecture. It provides terminal setup, keyboard, mouse, and resize
+events, and buffered diff rendering. The application owns state, layout,
+widgets, and frame construction.
 
 Note: tuigo is pre-v1.0. Public APIs may change between minor releases.
 
@@ -52,6 +52,8 @@ for event := range events {
 	switch event.Type {
 	case terminal.EventKey:
 		// update application state
+	case terminal.EventMouse:
+		// update application state from event.Mouse
 	case terminal.EventResize:
 		// rebuild and render a frame for event.Resize.Width/Height
 	case terminal.EventError:
