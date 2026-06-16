@@ -149,6 +149,7 @@ func (c Color) String() string {
 	return string(colorEscapeSequences[idx])
 }
 
+//nolint:cyclop // mechanical ANSI color lookup table; avoids init-time map allocation.
 func colorCodeForEscapeSequence(escapeSequence ANSIEscapeSequence) (colorCode, bool) {
 	switch escapeSequence {
 	case FG_BLACK:
