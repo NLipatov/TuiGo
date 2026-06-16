@@ -483,7 +483,29 @@ func keyTextLabel(text string) string {
 	if text == " " {
 		return "space"
 	}
+	if displayWidth(text) == 0 {
+		return codepointLabel(text)
+	}
 	return text
+}
+
+func codepointLabel(text string) string {
+	if text == "" {
+		return "empty"
+	}
+	labels := make([]string, 0, len(text))
+	for _, r := range text {
+		labels = append(labels, runeCodepointLabel(r))
+	}
+	return strings.Join(labels, "+")
+}
+
+func runeCodepointLabel(r rune) string {
+	code := strings.ToUpper(strconv.FormatInt(int64(r), 16))
+	if len(code) < 4 {
+		code = strings.Repeat("0", 4-len(code)) + code
+	}
+	return "U+" + code
 }
 
 func mouseLabel(event input.MouseEvent) string {
