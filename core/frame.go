@@ -2,12 +2,22 @@ package core
 
 import (
 	"errors"
+	"fmt"
 )
 
 var (
 	ErrInvalidFrameDimensions = errors.New("invalid frame dimensions")
 	ErrOutOfFrameBounds       = errors.New("out of frame bounds")
 )
+
+type FrameCellLayoutError struct {
+	X, Y   int
+	Reason string
+}
+
+func (f FrameCellLayoutError) Error() string {
+	return fmt.Sprintf("invalid frame cell layout: %s. At x: %d, y: %d", f.Reason, f.X, f.Y)
+}
 
 type Frame struct {
 	height, width int
@@ -21,11 +31,48 @@ func NewFrame(width, height int, cells []Cell) (Frame, error) {
 	if len(cells) != width*height {
 		return Frame{}, ErrInvalidFrameDimensions
 	}
-	return Frame{
+	frame := Frame{
 		height: height,
 		width:  width,
 		cells:  cells,
-	}, nil
+	}
+	for y := range height {
+		for x := 0; x < width; x++ {
+			cell, err := frame.CellAt(x, y)
+			if err != nil {
+				return Frame{}, err
+			}
+			switch cell.Width() {
+			case 0:
+				return Frame{}, FrameCellLayoutError{
+					X:      x,
+					Y:      y,
+					Reason: "unexpected continuation block",
+				}
+			case 2:
+				if x+1 == width {
+					return Frame{}, FrameCellLayoutError{
+						X:      x,
+						Y:      y,
+						Reason: "missing continuation block",
+					}
+				}
+				continuation, err := frame.CellAt(x+1, y)
+				if err != nil {
+					return Frame{}, err
+				}
+				if continuation.Width() != 0 {
+					return Frame{}, FrameCellLayoutError{
+						X:      x,
+						Y:      y,
+						Reason: "missing continuation block",
+					}
+				}
+				x += cell.Width() - 1
+			}
+		}
+	}
+	return frame, nil
 }
 
 func (f Frame) Height() int {

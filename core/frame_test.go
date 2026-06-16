@@ -102,6 +102,88 @@ func TestNewFrameRejectsInvalidDimensions(t *testing.T) {
 	}
 }
 
+func TestNewFrameAcceptsWideCellWithContinuation(t *testing.T) {
+	cells := []Cell{
+		testCellWithGlyph(t, 'A'),
+		testCellWithGlyph(t, '🙂'),
+		{},
+		testCellWithGlyph(t, 'B'),
+	}
+
+	frame, err := NewFrame(4, 1, cells)
+	if err != nil {
+		t.Fatalf("NewFrame() error = %v", err)
+	}
+
+	got, err := frame.CellAt(2, 0)
+	if err != nil {
+		t.Fatalf("CellAt() error = %v", err)
+	}
+	if got != (Cell{}) {
+		t.Fatalf("CellAt() = %#v, want continuation block", got)
+	}
+}
+
+func TestNewFrameRejectsInvalidCellLayout(t *testing.T) {
+	blank := testCellWithGlyph(t, ' ')
+	wide := testCellWithGlyph(t, '🙂')
+
+	tests := []struct {
+		name       string
+		width      int
+		cells      []Cell
+		wantX      int
+		wantReason string
+	}{
+		{
+			name:       "unexpected continuation at row start",
+			width:      3,
+			cells:      []Cell{{}, blank, blank},
+			wantX:      0,
+			wantReason: "unexpected continuation block",
+		},
+		{
+			name:       "unexpected continuation after normal cell",
+			width:      3,
+			cells:      []Cell{blank, {}, blank},
+			wantX:      1,
+			wantReason: "unexpected continuation block",
+		},
+		{
+			name:       "wide cell at row end",
+			width:      3,
+			cells:      []Cell{blank, blank, wide},
+			wantX:      2,
+			wantReason: "missing continuation block",
+		},
+		{
+			name:       "wide cell followed by normal cell",
+			width:      3,
+			cells:      []Cell{blank, wide, blank},
+			wantX:      1,
+			wantReason: "missing continuation block",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			_, err := NewFrame(tt.width, 1, tt.cells)
+			var layoutErr FrameCellLayoutError
+			if !errors.As(err, &layoutErr) {
+				t.Fatalf("NewFrame() error = %v, want FrameCellLayoutError", err)
+			}
+			if layoutErr.X != tt.wantX || layoutErr.Y != 0 || layoutErr.Reason != tt.wantReason {
+				t.Fatalf(
+					"FrameCellLayoutError = %#v, want x=%d y=0 reason=%q",
+					layoutErr,
+					tt.wantX,
+					tt.wantReason,
+				)
+			}
+		})
+	}
+}
+
 func TestFrameCellAtReadsCellsByRowMajorIndex(t *testing.T) {
 	cells := []Cell{
 		testCell(t, ansi.FG_BLACK),
@@ -204,7 +286,7 @@ func TestFrameCellAtRejectsOutOfBoundsCoordinates(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			frame, err := NewFrame(3, 2, make([]Cell, 6))
+			frame, err := newBlankFrame(t, 3, 2)
 			if err != nil {
 				t.Fatalf("NewFrame() error = %v", err)
 			}
@@ -250,7 +332,7 @@ func TestFrameRowAtReadsCellsByRowMajorIndex(t *testing.T) {
 }
 
 func TestFrameRowAtLimitsCapacityToRow(t *testing.T) {
-	frame, err := NewFrame(3, 2, make([]Cell, 6))
+	frame, err := newBlankFrame(t, 3, 2)
 	if err != nil {
 		t.Fatalf("NewFrame() error = %v", err)
 	}
@@ -283,7 +365,7 @@ func TestFrameRowAtRejectsOutOfBoundsRows(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			frame, err := NewFrame(3, 2, make([]Cell, 6))
+			frame, err := newBlankFrame(t, 3, 2)
 			if err != nil {
 				t.Fatalf("NewFrame() error = %v", err)
 			}
@@ -342,6 +424,17 @@ func TestFrameRowAtDoesNotAllocate(t *testing.T) {
 	if allocs != 0 {
 		t.Fatalf("allocations per RowAt = %.2f, want 0", allocs)
 	}
+}
+
+func newBlankFrame(t *testing.T, width, height int) (Frame, error) {
+	t.Helper()
+
+	blank := testCellWithGlyph(t, ' ')
+	cells := make([]Cell, width*height)
+	for i := range cells {
+		cells[i] = blank
+	}
+	return NewFrame(width, height, cells)
 }
 
 func testCell(t *testing.T, sequence ansi.ANSIEscapeSequence) Cell {
