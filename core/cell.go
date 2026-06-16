@@ -14,8 +14,8 @@ var (
 )
 
 type Cell struct {
-	fg, bg ansi.Color
 	glyph  string
+	fg, bg ansi.Color
 	width  uint8
 }
 
