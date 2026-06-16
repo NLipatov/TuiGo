@@ -232,7 +232,7 @@ func renderDemo(session *terminal.Session, state *demoState, buffers *frameBuffe
 func drawDemoFrame(cells []core.Cell, state demoState) {
 	colors := newDemoPalette()
 	for i := range cells {
-		cells[i] = core.NewCell(' ', colors.fg, colors.bg)
+		cells[i] = mustCell(" ", colors.fg, colors.bg)
 	}
 
 	if state.width < minDemoWidth || state.height < minDemoHeight {
@@ -402,31 +402,31 @@ func drawBox(cells []core.Cell, width, height, left, top, boxWidth, boxHeight in
 	}
 	right := left + boxWidth - 1
 	bottom := top + boxHeight - 1
-	putCell(cells, width, height, left, top, core.NewCell('┌', fg, bg))
-	putCell(cells, width, height, right, top, core.NewCell('┐', fg, bg))
-	putCell(cells, width, height, left, bottom, core.NewCell('└', fg, bg))
-	putCell(cells, width, height, right, bottom, core.NewCell('┘', fg, bg))
+	putCell(cells, width, height, left, top, mustCell("┌", fg, bg))
+	putCell(cells, width, height, right, top, mustCell("┐", fg, bg))
+	putCell(cells, width, height, left, bottom, mustCell("└", fg, bg))
+	putCell(cells, width, height, right, bottom, mustCell("┘", fg, bg))
 	for x := left + 1; x < right; x++ {
-		putCell(cells, width, height, x, top, core.NewCell('─', fg, bg))
-		putCell(cells, width, height, x, bottom, core.NewCell('─', fg, bg))
+		putCell(cells, width, height, x, top, mustCell("─", fg, bg))
+		putCell(cells, width, height, x, bottom, mustCell("─", fg, bg))
 	}
 	for y := top + 1; y < bottom; y++ {
-		putCell(cells, width, height, left, y, core.NewCell('│', fg, bg))
-		putCell(cells, width, height, right, y, core.NewCell('│', fg, bg))
+		putCell(cells, width, height, left, y, mustCell("│", fg, bg))
+		putCell(cells, width, height, right, y, mustCell("│", fg, bg))
 	}
 }
 
 func drawSeparator(cells []core.Cell, width, height, left, y, lineWidth int, fg, bg ansi.Color) {
-	putCell(cells, width, height, left, y, core.NewCell('├', fg, bg))
-	putCell(cells, width, height, left+lineWidth-1, y, core.NewCell('┤', fg, bg))
+	putCell(cells, width, height, left, y, mustCell("├", fg, bg))
+	putCell(cells, width, height, left+lineWidth-1, y, mustCell("┤", fg, bg))
 	for x := 1; x < lineWidth-1; x++ {
-		putCell(cells, width, height, left+x, y, core.NewCell('─', fg, bg))
+		putCell(cells, width, height, left+x, y, mustCell("─", fg, bg))
 	}
 }
 
 func drawText(cells []core.Cell, width, height, left, y int, text string, fg, bg ansi.Color) {
 	for x, char := range []rune(text) {
-		putCell(cells, width, height, left+x, y, core.NewCell(char, fg, bg))
+		putCell(cells, width, height, left+x, y, mustCell(string(char), fg, bg))
 	}
 }
 
@@ -558,4 +558,12 @@ func mustColor(sequence ansi.ANSIEscapeSequence) ansi.Color {
 		panic(err)
 	}
 	return color
+}
+
+func mustCell(text string, fg, bg ansi.Color) core.Cell {
+	cell, err := core.NewCell(text, fg, bg)
+	if err != nil {
+		panic(err)
+	}
+	return cell
 }

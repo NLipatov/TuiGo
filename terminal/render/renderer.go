@@ -3,7 +3,6 @@ package render
 import (
 	"io"
 	"strconv"
-	"unicode/utf8"
 
 	"github.com/NLipatov/tuigo/ansi"
 	"github.com/NLipatov/tuigo/core"
@@ -20,7 +19,6 @@ type Renderer struct {
 	frame, oldFrame core.Frame
 	fullRepaint     bool
 	writer          io.Writer
-	symbol          [utf8.UTFMax]byte
 	out             []byte
 	style           renderStyle
 }
@@ -119,9 +117,11 @@ func (r *Renderer) renderDiffFrame() error {
 func (r *Renderer) renderRow(x, y int, cells []core.Cell) {
 	r.cursorMove(x, y)
 	for _, cell := range cells {
+		if cell.Width() == 0 {
+			continue
+		}
 		r.renderStyle(cell)
-		n := utf8.EncodeRune(r.symbol[:], cell.Symbol())
-		r.out = append(r.out, r.symbol[:n]...)
+		r.out = append(r.out, cell.Glyph()...)
 	}
 }
 

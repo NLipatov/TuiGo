@@ -29,7 +29,7 @@ func TestNewFrameExposesDimensionsAndCells(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			cells := make([]Cell, tt.width*tt.height)
 			for i := range cells {
-				cells[i] = testCellWithSymbol(t, rune('a'+i))
+				cells[i] = testCellWithGlyph(t, rune('a'+i))
 			}
 			frame, err := NewFrame(tt.width, tt.height, cells)
 			if err != nil {
@@ -356,10 +356,14 @@ func testCell(t *testing.T, sequence ansi.ANSIEscapeSequence) Cell {
 		t.Fatalf("NewColor(%q) error = %v", ansi.BG_BLACK, err)
 	}
 
-	return NewCell('x', fg, bg)
+	cell, err := NewCell("x", fg, bg)
+	if err != nil {
+		t.Fatalf("NewCell(%q) error = %v", "x", err)
+	}
+	return cell
 }
 
-func testCellWithSymbol(t *testing.T, symbol rune) Cell {
+func testCellWithGlyph(t *testing.T, symbol rune) Cell {
 	t.Helper()
 
 	fg, err := ansi.NewColor(ansi.FG_RED)
@@ -371,5 +375,9 @@ func testCellWithSymbol(t *testing.T, symbol rune) Cell {
 		t.Fatalf("NewColor(%q) error = %v", ansi.BG_BLACK, err)
 	}
 
-	return NewCell(symbol, fg, bg)
+	cell, err := NewCell(string(symbol), fg, bg)
+	if err != nil {
+		t.Fatalf("NewCell(%q) error = %v", string(symbol), err)
+	}
+	return cell
 }
