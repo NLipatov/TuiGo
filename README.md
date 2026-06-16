@@ -8,11 +8,11 @@ Frame time and allocations per render.
 
 | Workload | tuigo | vaxis | tcell |
 |---|---:|---:|---:|
-| 1 dirty cell | **12.26 us, 0 allocs** | 34.41 us, 0 allocs | 68.78 us, 4 allocs |
-| 5% dirty cells | **18.94 us, 0 allocs** | 43.68 us, 0 allocs | 89.12 us, 960 allocs |
-| Full frame change | **44.21 us, 0 allocs** | 87.33 us, 0 allocs | 440.4 us, 19.20k allocs |
+| 1 dirty cell | **8.14 us, 0 allocs** | 34.77 us, 0 allocs | 68.75 us, 4 allocs |
+| 5% dirty cells | **14.31 us, 0 allocs** | 44.17 us, 0 allocs | 88.62 us, 960 allocs |
+| Full frame change | **32.06 us, 0 allocs** | 87.56 us, 0 allocs | 440.5 us, 19.20k allocs |
 
-120x40 cells, Go 1.26.3, Apple M4 Pro, `-cpu=1`, `-count=20`.
+120x40 cells, Go 1.26.4, Apple M4 Pro, `-cpu=1`, `-count=20`.
 Renderer workloads; terminal emulator paint is not measured.
 
 Reproduce with Go benchmarks and pinned `benchstat`:
