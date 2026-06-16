@@ -36,22 +36,29 @@ func NewFrame(width, height int, cells []Cell) (Frame, error) {
 		width:  width,
 		cells:  cells,
 	}
-	for y := range height {
-		for x := 0; x < width; x++ {
+	if err := frame.validateCellLayout(); err != nil {
+		return Frame{}, err
+	}
+	return frame, nil
+}
+
+func (frame Frame) validateCellLayout() error {
+	for y := range frame.height {
+		for x := 0; x < frame.width; x++ {
 			cell, err := frame.CellAt(x, y)
 			if err != nil {
-				return Frame{}, err
+				return err
 			}
 			switch cell.Width() {
 			case 0:
-				return Frame{}, FrameCellLayoutError{
+				return FrameCellLayoutError{
 					X:      x,
 					Y:      y,
 					Reason: "unexpected continuation block",
 				}
 			case 2:
-				if x+1 == width {
-					return Frame{}, FrameCellLayoutError{
+				if x+1 == frame.width {
+					return FrameCellLayoutError{
 						X:      x,
 						Y:      y,
 						Reason: "missing continuation block",
@@ -59,10 +66,10 @@ func NewFrame(width, height int, cells []Cell) (Frame, error) {
 				}
 				continuation, err := frame.CellAt(x+1, y)
 				if err != nil {
-					return Frame{}, err
+					return err
 				}
 				if continuation.Width() != 0 {
-					return Frame{}, FrameCellLayoutError{
+					return FrameCellLayoutError{
 						X:      x,
 						Y:      y,
 						Reason: "missing continuation block",
@@ -72,7 +79,7 @@ func NewFrame(width, height int, cells []Cell) (Frame, error) {
 			}
 		}
 	}
-	return frame, nil
+	return nil
 }
 
 func (f Frame) Height() int {
