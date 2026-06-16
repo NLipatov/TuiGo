@@ -16,7 +16,7 @@ var (
 type Cell struct {
 	fg, bg ansi.Color
 	glyph  string
-	width  int
+	width  uint8
 }
 
 func NewCell(glyph string, fg, bg ansi.Color) (Cell, error) {
@@ -34,7 +34,7 @@ func NewCell(glyph string, fg, bg ansi.Color) (Cell, error) {
 		glyph: cluster,
 		fg:    fg,
 		bg:    bg,
-		width: width,
+		width: uint8(width),
 	}, nil
 }
 
@@ -47,7 +47,7 @@ func (c Cell) Background() ansi.Color {
 }
 
 func (c Cell) Width() int {
-	return c.width
+	return int(c.width)
 }
 
 func (c Cell) Glyph() string {
