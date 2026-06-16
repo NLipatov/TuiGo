@@ -1,6 +1,6 @@
 module github.com/NLipatov/tuigo/benchmarks
 
-go 1.26.3
+go 1.26.4
 
 require (
 	git.sr.ht/~rockorager/vaxis v0.16.0

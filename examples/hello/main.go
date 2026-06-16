@@ -8,6 +8,7 @@ import (
 	"github.com/NLipatov/tuigo/core"
 	"github.com/NLipatov/tuigo/terminal"
 	"github.com/NLipatov/tuigo/terminal/input"
+	"github.com/rivo/uniseg"
 )
 
 func main() {
@@ -138,8 +139,19 @@ func drawLogo(cells []core.Cell, width, height, left, top int, cell core.Cell) {
 }
 
 func drawText(cells []core.Cell, width, height, left, y int, text string, fg, bg ansi.Color) {
-	for x, char := range []rune(text) {
-		putCell(cells, width, height, left+x, y, mustCell(string(char), fg, bg))
+	x := left
+	for text != "" {
+		glyph, rest, _, _ := uniseg.FirstGraphemeClusterInString(text, -1)
+		cell := mustCell(glyph, fg, bg)
+		if x < 0 || x+cell.Width() > width {
+			return
+		}
+		putCell(cells, width, height, x, y, cell)
+		if cell.Width() == 2 {
+			putCell(cells, width, height, x+1, y, core.Cell{})
+		}
+		x += cell.Width()
+		text = rest
 	}
 }
 

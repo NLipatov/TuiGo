@@ -12,6 +12,7 @@ import (
 	"github.com/NLipatov/tuigo/core"
 	"github.com/NLipatov/tuigo/terminal"
 	"github.com/NLipatov/tuigo/terminal/input"
+	"github.com/rivo/uniseg"
 )
 
 const (
@@ -188,8 +189,13 @@ func (b *frameBuffers) ensure(width, height int) error {
 		return core.ErrInvalidFrameDimensions
 	}
 
+	colors := newDemoPalette()
+	blank := mustCell(" ", colors.fg, colors.bg)
 	for idx := range b.buffers {
 		cells := make([]core.Cell, width*height)
+		for i := range cells {
+			cells[i] = blank
+		}
 		frame, err := core.NewFrame(width, height, cells)
 		if err != nil {
 			return err
@@ -425,8 +431,19 @@ func drawSeparator(cells []core.Cell, width, height, left, y, lineWidth int, fg,
 }
 
 func drawText(cells []core.Cell, width, height, left, y int, text string, fg, bg ansi.Color) {
-	for x, char := range []rune(text) {
-		putCell(cells, width, height, left+x, y, mustCell(string(char), fg, bg))
+	x := left
+	for text != "" {
+		glyph, rest, _, _ := uniseg.FirstGraphemeClusterInString(text, -1)
+		cell := mustCell(glyph, fg, bg)
+		if x < 0 || x+cell.Width() > width {
+			return
+		}
+		putCell(cells, width, height, x, y, cell)
+		if cell.Width() == 2 {
+			putCell(cells, width, height, x+1, y, core.Cell{})
+		}
+		x += cell.Width()
+		text = rest
 	}
 }
 
@@ -542,14 +559,35 @@ func trimLabel(text string, limit int) string {
 	if limit <= 0 {
 		return ""
 	}
-	runes := []rune(text)
-	if len(runes) <= limit {
+	if displayWidth(text) <= limit {
 		return text
 	}
 	if limit == 1 {
 		return "…"
 	}
-	return string(runes[:limit-1]) + "…"
+
+	out := ""
+	width := 0
+	for text != "" {
+		glyph, rest, glyphWidth, _ := uniseg.FirstGraphemeClusterInString(text, -1)
+		if width+glyphWidth > limit-1 {
+			break
+		}
+		out += glyph
+		width += glyphWidth
+		text = rest
+	}
+	return out + "…"
+}
+
+func displayWidth(text string) int {
+	width := 0
+	for text != "" {
+		_, rest, glyphWidth, _ := uniseg.FirstGraphemeClusterInString(text, -1)
+		width += glyphWidth
+		text = rest
+	}
+	return width
 }
 
 func mustColor(sequence ansi.ANSIEscapeSequence) ansi.Color {
