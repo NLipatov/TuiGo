@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.3](https://github.com/NLipatov/TuiGo/compare/v0.1.2...v0.1.3) (2026-06-16)
+
+
+### Features
+
+* **core:** support variable-width glyphs ([#11](https://github.com/NLipatov/TuiGo/issues/11)) ([5f28744](https://github.com/NLipatov/TuiGo/commit/5f28744370e96d3bf82bc9ff53c6676d245ed174))
+
 ## [0.1.2](https://github.com/NLipatov/TuiGo/compare/v0.1.1...v0.1.2) (2026-06-14)
 
 
