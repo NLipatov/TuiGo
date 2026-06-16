@@ -12,6 +12,7 @@ import (
 	"github.com/NLipatov/tuigo/core"
 	"github.com/NLipatov/tuigo/terminal"
 	"github.com/NLipatov/tuigo/terminal/input"
+	"github.com/rivo/uniseg"
 )
 
 const (
@@ -188,8 +189,13 @@ func (b *frameBuffers) ensure(width, height int) error {
 		return core.ErrInvalidFrameDimensions
 	}
 
+	colors := newDemoPalette()
+	blank := mustCell(" ", colors.fg, colors.bg)
 	for idx := range b.buffers {
 		cells := make([]core.Cell, width*height)
+		for i := range cells {
+			cells[i] = blank
+		}
 		frame, err := core.NewFrame(width, height, cells)
 		if err != nil {
 			return err
@@ -232,7 +238,7 @@ func renderDemo(session *terminal.Session, state *demoState, buffers *frameBuffe
 func drawDemoFrame(cells []core.Cell, state demoState) {
 	colors := newDemoPalette()
 	for i := range cells {
-		cells[i] = core.NewCell(' ', colors.fg, colors.bg)
+		cells[i] = mustCell(" ", colors.fg, colors.bg)
 	}
 
 	if state.width < minDemoWidth || state.height < minDemoHeight {
@@ -402,31 +408,42 @@ func drawBox(cells []core.Cell, width, height, left, top, boxWidth, boxHeight in
 	}
 	right := left + boxWidth - 1
 	bottom := top + boxHeight - 1
-	putCell(cells, width, height, left, top, core.NewCell('┌', fg, bg))
-	putCell(cells, width, height, right, top, core.NewCell('┐', fg, bg))
-	putCell(cells, width, height, left, bottom, core.NewCell('└', fg, bg))
-	putCell(cells, width, height, right, bottom, core.NewCell('┘', fg, bg))
+	putCell(cells, width, height, left, top, mustCell("┌", fg, bg))
+	putCell(cells, width, height, right, top, mustCell("┐", fg, bg))
+	putCell(cells, width, height, left, bottom, mustCell("└", fg, bg))
+	putCell(cells, width, height, right, bottom, mustCell("┘", fg, bg))
 	for x := left + 1; x < right; x++ {
-		putCell(cells, width, height, x, top, core.NewCell('─', fg, bg))
-		putCell(cells, width, height, x, bottom, core.NewCell('─', fg, bg))
+		putCell(cells, width, height, x, top, mustCell("─", fg, bg))
+		putCell(cells, width, height, x, bottom, mustCell("─", fg, bg))
 	}
 	for y := top + 1; y < bottom; y++ {
-		putCell(cells, width, height, left, y, core.NewCell('│', fg, bg))
-		putCell(cells, width, height, right, y, core.NewCell('│', fg, bg))
+		putCell(cells, width, height, left, y, mustCell("│", fg, bg))
+		putCell(cells, width, height, right, y, mustCell("│", fg, bg))
 	}
 }
 
 func drawSeparator(cells []core.Cell, width, height, left, y, lineWidth int, fg, bg ansi.Color) {
-	putCell(cells, width, height, left, y, core.NewCell('├', fg, bg))
-	putCell(cells, width, height, left+lineWidth-1, y, core.NewCell('┤', fg, bg))
+	putCell(cells, width, height, left, y, mustCell("├", fg, bg))
+	putCell(cells, width, height, left+lineWidth-1, y, mustCell("┤", fg, bg))
 	for x := 1; x < lineWidth-1; x++ {
-		putCell(cells, width, height, left+x, y, core.NewCell('─', fg, bg))
+		putCell(cells, width, height, left+x, y, mustCell("─", fg, bg))
 	}
 }
 
 func drawText(cells []core.Cell, width, height, left, y int, text string, fg, bg ansi.Color) {
-	for x, char := range []rune(text) {
-		putCell(cells, width, height, left+x, y, core.NewCell(char, fg, bg))
+	x := left
+	for text != "" {
+		glyph, rest, _, _ := uniseg.FirstGraphemeClusterInString(text, -1)
+		cell := mustCell(glyph, fg, bg)
+		if x < 0 || x+cell.Width() > width {
+			return
+		}
+		putCell(cells, width, height, x, y, cell)
+		if cell.Width() == 2 {
+			putCell(cells, width, height, x+1, y, core.Cell{})
+		}
+		x += cell.Width()
+		text = rest
 	}
 }
 
@@ -466,7 +483,29 @@ func keyTextLabel(text string) string {
 	if text == " " {
 		return "space"
 	}
+	if displayWidth(text) == 0 {
+		return codepointLabel(text)
+	}
 	return text
+}
+
+func codepointLabel(text string) string {
+	if text == "" {
+		return "empty"
+	}
+	labels := make([]string, 0, len(text))
+	for _, r := range text {
+		labels = append(labels, runeCodepointLabel(r))
+	}
+	return strings.Join(labels, "+")
+}
+
+func runeCodepointLabel(r rune) string {
+	code := strings.ToUpper(strconv.FormatInt(int64(r), 16))
+	if len(code) < 4 {
+		code = strings.Repeat("0", 4-len(code)) + code
+	}
+	return "U+" + code
 }
 
 func mouseLabel(event input.MouseEvent) string {
@@ -542,14 +581,35 @@ func trimLabel(text string, limit int) string {
 	if limit <= 0 {
 		return ""
 	}
-	runes := []rune(text)
-	if len(runes) <= limit {
+	if displayWidth(text) <= limit {
 		return text
 	}
 	if limit == 1 {
 		return "…"
 	}
-	return string(runes[:limit-1]) + "…"
+
+	out := ""
+	width := 0
+	for text != "" {
+		glyph, rest, glyphWidth, _ := uniseg.FirstGraphemeClusterInString(text, -1)
+		if width+glyphWidth > limit-1 {
+			break
+		}
+		out += glyph
+		width += glyphWidth
+		text = rest
+	}
+	return out + "…"
+}
+
+func displayWidth(text string) int {
+	width := 0
+	for text != "" {
+		_, rest, glyphWidth, _ := uniseg.FirstGraphemeClusterInString(text, -1)
+		width += glyphWidth
+		text = rest
+	}
+	return width
 }
 
 func mustColor(sequence ansi.ANSIEscapeSequence) ansi.Color {
@@ -558,4 +618,12 @@ func mustColor(sequence ansi.ANSIEscapeSequence) ansi.Color {
 		panic(err)
 	}
 	return color
+}
+
+func mustCell(text string, fg, bg ansi.Color) core.Cell {
+	cell, err := core.NewCell(text, fg, bg)
+	if err != nil {
+		panic(err)
+	}
+	return cell
 }

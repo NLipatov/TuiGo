@@ -41,7 +41,11 @@ func TestNewSessionWiresRendererToSessionOutput(t *testing.T) {
 	if err != nil {
 		t.Fatalf("NewColor(%q) error = %v", ansi.BG_BLACK, err)
 	}
-	frame, err := core.NewFrame(1, 1, []core.Cell{core.NewCell('x', fg, bg)})
+	cell, err := core.NewCell("x", fg, bg)
+	if err != nil {
+		t.Fatalf("core.NewCell(%q) error = %v", "x", err)
+	}
+	frame, err := core.NewFrame(1, 1, []core.Cell{cell})
 	if err != nil {
 		t.Fatalf("core.NewFrame() error = %v", err)
 	}

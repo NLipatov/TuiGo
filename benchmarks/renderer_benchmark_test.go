@@ -362,7 +362,11 @@ func tuigoCell(b *testing.B, symbol rune, changedStyle bool) core.Cell {
 	if err != nil {
 		b.Fatalf("ansi.NewColor(%q) error = %v", ansi.BG_BLACK, err)
 	}
-	return core.NewCell(symbol, fg, bg)
+	cell, err := core.NewCell(string(symbol), fg, bg)
+	if err != nil {
+		b.Fatalf("core.NewCell(%q) error = %v", string(symbol), err)
+	}
+	return cell
 }
 
 func tcellStyle(changed bool) tcell.Style {

@@ -8,6 +8,7 @@ import (
 	"github.com/NLipatov/tuigo/core"
 	"github.com/NLipatov/tuigo/terminal"
 	"github.com/NLipatov/tuigo/terminal/input"
+	"github.com/rivo/uniseg"
 )
 
 func main() {
@@ -118,9 +119,9 @@ type palette struct {
 func newPalette() palette {
 	bg := mustColor(ansi.BG_BLACK)
 	return palette{
-		blank:  core.NewCell(' ', mustColor(ansi.FG_WHITE), bg),
-		logo:   core.NewCell('=', mustColor(ansi.FG_BOLD_GREEN), bg),
-		shadow: core.NewCell('.', mustColor(ansi.FG_HIGH_INTENSITY_BLACK), bg),
+		blank:  mustCell(" ", mustColor(ansi.FG_WHITE), bg),
+		logo:   mustCell("=", mustColor(ansi.FG_BOLD_GREEN), bg),
+		shadow: mustCell(".", mustColor(ansi.FG_HIGH_INTENSITY_BLACK), bg),
 		title:  mustColor(ansi.FG_GREEN),
 		hint:   mustColor(ansi.FG_HIGH_INTENSITY_BLACK),
 		bg:     bg,
@@ -138,8 +139,19 @@ func drawLogo(cells []core.Cell, width, height, left, top int, cell core.Cell) {
 }
 
 func drawText(cells []core.Cell, width, height, left, y int, text string, fg, bg ansi.Color) {
-	for x, char := range text {
-		putCell(cells, width, height, left+x, y, core.NewCell(char, fg, bg))
+	x := left
+	for text != "" {
+		glyph, rest, _, _ := uniseg.FirstGraphemeClusterInString(text, -1)
+		cell := mustCell(glyph, fg, bg)
+		if x < 0 || x+cell.Width() > width {
+			return
+		}
+		putCell(cells, width, height, x, y, cell)
+		if cell.Width() == 2 {
+			putCell(cells, width, height, x+1, y, core.Cell{})
+		}
+		x += cell.Width()
+		text = rest
 	}
 }
 
@@ -172,4 +184,12 @@ func mustColor(sequence ansi.ANSIEscapeSequence) ansi.Color {
 		panic(err)
 	}
 	return color
+}
+
+func mustCell(text string, fg, bg ansi.Color) core.Cell {
+	cell, err := core.NewCell(text, fg, bg)
+	if err != nil {
+		panic(err)
+	}
+	return cell
 }
