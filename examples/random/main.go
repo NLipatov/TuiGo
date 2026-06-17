@@ -55,8 +55,7 @@ type demo struct {
 func main() {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-
-	session, err := terminal.NewSession(ctx, os.Stdin, os.Stdout)
+	session, events, demo, err := setup(ctx)
 	if err != nil {
 		panic(err)
 	}
@@ -65,16 +64,6 @@ func main() {
 			panic(err)
 		}
 	}()
-
-	events, err := session.Start()
-	if err != nil {
-		panic(err)
-	}
-
-	demo, err := newDemo(session)
-	if err != nil {
-		panic(err)
-	}
 	for {
 		select {
 		case <-ctx.Done():
@@ -92,8 +81,7 @@ func main() {
 					return
 				}
 			case terminal.EventResize:
-				demo, err = newDemo(session)
-				if err != nil {
+				if demo, err = newDemo(session); err != nil {
 					panic(err)
 				}
 			case terminal.EventError:
@@ -105,6 +93,22 @@ func main() {
 			}
 		}
 	}
+}
+
+func setup(ctx context.Context) (terminal.Session, <-chan terminal.Event, *demo, error) {
+	session, err := terminal.NewSession(ctx, os.Stdin, os.Stdout)
+	if err != nil {
+		return terminal.Session{}, nil, nil, err
+	}
+	events, err := session.Start()
+	if err != nil {
+		return terminal.Session{}, nil, nil, err
+	}
+	demo, err := newDemo(session)
+	if err != nil {
+		return terminal.Session{}, nil, nil, err
+	}
+	return session, events, demo, nil
 }
 
 func newDemo(session terminal.Session) (*demo, error) {
