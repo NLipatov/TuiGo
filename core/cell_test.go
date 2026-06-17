@@ -94,6 +94,66 @@ func TestNewCellRejectsInvalidGlyph(t *testing.T) {
 	}
 }
 
+func TestNewCellWithWidthAcceptsKnownWidth(t *testing.T) {
+	fg, bg := testColors(t)
+
+	cell, err := NewCellWithWidth("Ж", 1, fg, bg)
+	if err != nil {
+		t.Fatalf("NewCellWithWidth() error = %v", err)
+	}
+	if cell.Glyph() != "Ж" {
+		t.Fatalf("Glyph() = %q, want %q", cell.Glyph(), "Ж")
+	}
+	if cell.Width() != 1 {
+		t.Fatalf("Width() = %d, want 1", cell.Width())
+	}
+	if cell.Foreground() != fg {
+		t.Fatalf("Foreground() = %#v, want %#v", cell.Foreground(), fg)
+	}
+	if cell.Background() != bg {
+		t.Fatalf("Background() = %#v, want %#v", cell.Background(), bg)
+	}
+}
+
+func TestNewCellWithWidthRejectsInvalidInput(t *testing.T) {
+	fg, bg := testColors(t)
+
+	tests := []struct {
+		name  string
+		glyph string
+		width int
+		want  error
+	}{
+		{
+			name:  "empty glyph",
+			glyph: "",
+			width: 1,
+			want:  ErrEmptyCellGlyph,
+		},
+		{
+			name:  "zero width",
+			glyph: "x",
+			width: 0,
+			want:  ErrUnsupportedCellWidth,
+		},
+		{
+			name:  "unsupported width",
+			glyph: "x",
+			width: 3,
+			want:  ErrUnsupportedCellWidth,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			_, err := NewCellWithWidth(tt.glyph, tt.width, fg, bg)
+			if !errors.Is(err, tt.want) {
+				t.Fatalf("NewCellWithWidth(%q, %d) error = %v, want %v", tt.glyph, tt.width, err, tt.want)
+			}
+		})
+	}
+}
+
 func testColors(t *testing.T) (ansi.Color, ansi.Color) {
 	t.Helper()
 

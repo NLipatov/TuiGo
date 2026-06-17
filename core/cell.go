@@ -30,8 +30,18 @@ func NewCell(glyph string, fg, bg ansi.Color) (Cell, error) {
 	if width != 1 && width != 2 {
 		return Cell{}, ErrUnsupportedCellWidth
 	}
+	return NewCellWithWidth(cluster, width, fg, bg)
+}
+
+func NewCellWithWidth(glyph string, width int, fg, bg ansi.Color) (Cell, error) {
+	if glyph == "" {
+		return Cell{}, ErrEmptyCellGlyph
+	}
+	if width != 1 && width != 2 {
+		return Cell{}, ErrUnsupportedCellWidth
+	}
 	return Cell{
-		glyph: cluster,
+		glyph: glyph,
 		fg:    fg,
 		bg:    bg,
 		width: uint8(width),
