@@ -33,6 +33,10 @@ func NewCell(glyph string, fg, bg ansi.Color) (Cell, error) {
 	return NewCellWithWidth(cluster, width, fg, bg)
 }
 
+// NewCellWithWidth creates a cell from a caller-validated single grapheme cluster.
+// The caller must ensure glyph is exactly one grapheme cluster and width is its display width.
+// Passing multiple grapheme clusters or an incorrect width can corrupt frame rendering.
+// It is a faster but unsafe alternative to NewCell.
 func NewCellWithWidth(glyph string, width int, fg, bg ansi.Color) (Cell, error) {
 	if glyph == "" {
 		return Cell{}, ErrEmptyCellGlyph
