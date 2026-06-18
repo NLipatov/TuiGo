@@ -97,21 +97,31 @@ func TestNewCellRejectsInvalidGlyph(t *testing.T) {
 func TestNewCellWithWidthAcceptsKnownWidth(t *testing.T) {
 	fg, bg := testColors(t)
 
-	cell, err := NewCellWithWidth("Ж", 1, fg, bg)
-	if err != nil {
-		t.Fatalf("NewCellWithWidth() error = %v", err)
+	tests := []struct {
+		glyph string
+		width int
+	}{
+		{glyph: "Ж", width: 1},
+		{glyph: "界", width: 2},
 	}
-	if cell.Glyph() != "Ж" {
-		t.Fatalf("Glyph() = %q, want %q", cell.Glyph(), "Ж")
-	}
-	if cell.Width() != 1 {
-		t.Fatalf("Width() = %d, want 1", cell.Width())
-	}
-	if cell.Foreground() != fg {
-		t.Fatalf("Foreground() = %#v, want %#v", cell.Foreground(), fg)
-	}
-	if cell.Background() != bg {
-		t.Fatalf("Background() = %#v, want %#v", cell.Background(), bg)
+
+	for _, tt := range tests {
+		cell, err := NewCellWithWidth(tt.glyph, tt.width, fg, bg)
+		if err != nil {
+			t.Fatalf("NewCellWithWidth() error = %v", err)
+		}
+		if cell.Glyph() != tt.glyph {
+			t.Fatalf("Glyph() = %q, want %q", cell.Glyph(), tt.glyph)
+		}
+		if cell.Width() != tt.width {
+			t.Fatalf("Width() = %d, want %d", cell.Width(), tt.width)
+		}
+		if cell.Foreground() != fg {
+			t.Fatalf("Foreground() = %#v, want %#v", cell.Foreground(), fg)
+		}
+		if cell.Background() != bg {
+			t.Fatalf("Background() = %#v, want %#v", cell.Background(), bg)
+		}
 	}
 }
 
