@@ -10,6 +10,8 @@ import (
 
 	"github.com/NLipatov/tuigo/ansi"
 	"github.com/NLipatov/tuigo/core"
+	"github.com/NLipatov/tuigo/keyboard"
+	"github.com/NLipatov/tuigo/mouse"
 	"github.com/NLipatov/tuigo/terminal/input"
 	"github.com/NLipatov/tuigo/terminal/resize"
 	"golang.org/x/term"
@@ -161,7 +163,7 @@ func TestSessionEventLoopForwardsInputAndResizeEvents(t *testing.T) {
 		t.Fatalf("resize event = %#v, want %#v", got.Resize, resizeEvent)
 	}
 
-	keyEvent := input.KeyEvent{Code: input.KeyCode(1), Text: "a", Mod: input.ModCtrl}
+	keyEvent := keyboard.KeyEvent{Code: keyboard.KeyCode(1), Text: "a", Mod: keyboard.ModCtrl}
 	inputCh <- input.Event{Type: input.EventTypeKey, Key: keyEvent}
 	got = receiveSessionEvent(t, events)
 	if got.Type != EventKey {
@@ -171,12 +173,12 @@ func TestSessionEventLoopForwardsInputAndResizeEvents(t *testing.T) {
 		t.Fatalf("key event = %#v, want %#v", got.Key, keyEvent)
 	}
 
-	mouseEvent := input.MouseEvent{
+	mouseEvent := mouse.MouseEvent{
 		X:      10,
 		Y:      20,
-		Button: input.MouseButtonLeft,
-		Action: input.MouseActionPress,
-		Mod:    input.ModShift,
+		Button: mouse.MouseButtonLeft,
+		Action: mouse.MouseActionPress,
+		Mod:    keyboard.ModShift,
 	}
 	inputCh <- input.Event{Type: input.EventTypeMouse, Mouse: mouseEvent}
 	got = receiveSessionEvent(t, events)

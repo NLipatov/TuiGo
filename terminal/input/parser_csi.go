@@ -3,39 +3,41 @@ package input
 import (
 	"strconv"
 	"strings"
+
+	"github.com/NLipatov/tuigo/keyboard"
 )
 
-func eventForCSIFinal(final byte, params string) (KeyEvent, bool) {
+func eventForCSIFinal(final byte, params string) (keyboard.KeyEvent, bool) {
 	switch final {
 	case 'A':
-		return KeyEvent{Code: KeyUp, Mod: modFromCSIParams(params)}, true
+		return keyboard.KeyEvent{Code: keyboard.KeyUp, Mod: modFromCSIParams(params)}, true
 	case 'B':
-		return KeyEvent{Code: KeyDown, Mod: modFromCSIParams(params)}, true
+		return keyboard.KeyEvent{Code: keyboard.KeyDown, Mod: modFromCSIParams(params)}, true
 	case 'C':
-		return KeyEvent{Code: KeyRight, Mod: modFromCSIParams(params)}, true
+		return keyboard.KeyEvent{Code: keyboard.KeyRight, Mod: modFromCSIParams(params)}, true
 	case 'D':
-		return KeyEvent{Code: KeyLeft, Mod: modFromCSIParams(params)}, true
+		return keyboard.KeyEvent{Code: keyboard.KeyLeft, Mod: modFromCSIParams(params)}, true
 	case 'H':
-		return KeyEvent{Code: KeyHome, Mod: modFromCSIParams(params)}, true
+		return keyboard.KeyEvent{Code: keyboard.KeyHome, Mod: modFromCSIParams(params)}, true
 	case 'F':
-		return KeyEvent{Code: KeyEnd, Mod: modFromCSIParams(params)}, true
+		return keyboard.KeyEvent{Code: keyboard.KeyEnd, Mod: modFromCSIParams(params)}, true
 	case 'Z':
-		return KeyEvent{Code: KeyTab, Mod: ModShift}, true
+		return keyboard.KeyEvent{Code: keyboard.KeyTab, Mod: keyboard.ModShift}, true
 	case '~':
 		return eventForCSITilde(params)
 	default:
-		return KeyEvent{}, false
+		return keyboard.KeyEvent{}, false
 	}
 }
 
-func eventForCSITilde(params string) (KeyEvent, bool) {
+func eventForCSITilde(params string) (keyboard.KeyEvent, bool) {
 	values := splitCSIParams(params)
 	if len(values) == 0 {
-		return KeyEvent{}, false
+		return keyboard.KeyEvent{}, false
 	}
 
-	event := KeyEvent{Code: keyCodeForCSITilde(values[0])}
-	if event.Code == KeyUnknown {
+	event := keyboard.KeyEvent{Code: keyCodeForCSITilde(values[0])}
+	if event.Code == keyboard.KeyUnknown {
 		return event, true
 	}
 	if len(values) > 1 {
@@ -45,49 +47,49 @@ func eventForCSITilde(params string) (KeyEvent, bool) {
 }
 
 //nolint:cyclop // This switch is a flat CSI numeric key mapping table.
-func keyCodeForCSITilde(value int) KeyCode {
+func keyCodeForCSITilde(value int) keyboard.KeyCode {
 	switch value {
 	case 2:
-		return KeyInsert
+		return keyboard.KeyInsert
 	case 3:
-		return KeyDelete
+		return keyboard.KeyDelete
 	case 5:
-		return KeyPageUp
+		return keyboard.KeyPageUp
 	case 6:
-		return KeyPageDown
+		return keyboard.KeyPageDown
 	case 11:
-		return KeyF1
+		return keyboard.KeyF1
 	case 12:
-		return KeyF2
+		return keyboard.KeyF2
 	case 13:
-		return KeyF3
+		return keyboard.KeyF3
 	case 14:
-		return KeyF4
+		return keyboard.KeyF4
 	case 15:
-		return KeyF5
+		return keyboard.KeyF5
 	case 17:
-		return KeyF6
+		return keyboard.KeyF6
 	case 18:
-		return KeyF7
+		return keyboard.KeyF7
 	case 19:
-		return KeyF8
+		return keyboard.KeyF8
 	case 20:
-		return KeyF9
+		return keyboard.KeyF9
 	case 21:
-		return KeyF10
+		return keyboard.KeyF10
 	case 23:
-		return KeyF11
+		return keyboard.KeyF11
 	case 24:
-		return KeyF12
+		return keyboard.KeyF12
 	default:
-		return KeyUnknown
+		return keyboard.KeyUnknown
 	}
 }
 
-func modFromCSIParams(params string) KeyMod {
+func modFromCSIParams(params string) keyboard.KeyMod {
 	values := splitCSIParams(params)
 	if len(values) < 2 {
-		return ModNone
+		return keyboard.ModNone
 	}
 	return xtermModifier(values[1])
 }
@@ -113,21 +115,21 @@ func splitCSIParams(params string) []int {
 	return values
 }
 
-func xtermModifier(value int) KeyMod {
+func xtermModifier(value int) keyboard.KeyMod {
 	bits := value - 1
 	if bits <= 0 {
-		return ModNone
+		return keyboard.ModNone
 	}
 
-	var mod KeyMod
+	var mod keyboard.KeyMod
 	if bits&1 != 0 {
-		mod |= ModShift
+		mod |= keyboard.ModShift
 	}
 	if bits&2 != 0 {
-		mod |= ModAlt
+		mod |= keyboard.ModAlt
 	}
 	if bits&4 != 0 {
-		mod |= ModCtrl
+		mod |= keyboard.ModCtrl
 	}
 	return mod
 }

@@ -5,6 +5,7 @@ import (
 	"unicode/utf8"
 
 	"github.com/NLipatov/tuigo/ansi"
+	"github.com/NLipatov/tuigo/keyboard"
 )
 
 type Parser struct {
@@ -45,7 +46,7 @@ func (i *Parser) FlushPendingEscape() ParseResult {
 	result := i.Feed(rest)
 	result.Events = append([]Event{{
 		Type: EventTypeKey,
-		Key:  KeyEvent{Code: KeyEsc},
+		Key:  keyboard.KeyEvent{Code: keyboard.KeyEsc},
 	}}, result.Events...)
 	return result
 }
@@ -96,14 +97,14 @@ func (i *Parser) parseEscEvent(buf []byte) (Event, int, parseStatus) {
 		if status != parseDone {
 			return Event{}, 0, status
 		}
-		event.Mod |= ModAlt
+		event.Mod |= keyboard.ModAlt
 		return Event{Type: EventTypeKey, Key: event}, n + 1, parseDone
 	}
 	event, n, status := i.parseRuneEvent(buf[1:])
 	if status != parseDone {
 		return Event{}, 0, status
 	}
-	event.Mod |= ModAlt
+	event.Mod |= keyboard.ModAlt
 	return Event{Type: EventTypeKey, Key: event}, n + 1, parseDone
 }
 
@@ -120,13 +121,13 @@ func (i *Parser) parseCSISequence(buf []byte) (Event, int, parseStatus) {
 	if isSGRMouseSequence(params, final) {
 		mouse, ok := mouseEventFromSGR(params, final)
 		if !ok {
-			return Event{Type: EventTypeKey, Key: KeyEvent{Code: KeyUnknown}}, finalIdx + 1, parseDone
+			return Event{Type: EventTypeKey, Key: keyboard.KeyEvent{Code: keyboard.KeyUnknown}}, finalIdx + 1, parseDone
 		}
 		return Event{Type: EventTypeMouse, Mouse: mouse}, finalIdx + 1, parseDone
 	}
 	event, ok := eventForCSIFinal(final, params)
 	if !ok {
-		return Event{Type: EventTypeKey, Key: KeyEvent{Code: KeyUnknown}}, finalIdx + 1, parseDone
+		return Event{Type: EventTypeKey, Key: keyboard.KeyEvent{Code: keyboard.KeyUnknown}}, finalIdx + 1, parseDone
 	}
 	return Event{Type: EventTypeKey, Key: event}, finalIdx + 1, parseDone
 }
@@ -149,12 +150,12 @@ func (i *Parser) parseSS3Sequence(buf []byte) (Event, int, parseStatus) {
 			return Event{}, 0, parseNeedMore
 		}
 	}
-	return Event{Type: EventTypeKey, Key: KeyEvent{Code: KeyUnknown}}, len(ansi.SS3) + 1, parseDone
+	return Event{Type: EventTypeKey, Key: keyboard.KeyEvent{Code: keyboard.KeyUnknown}}, len(ansi.SS3) + 1, parseDone
 }
 
-func (i *Parser) parseControlEvent(buf []byte) (KeyEvent, int, parseStatus) {
+func (i *Parser) parseControlEvent(buf []byte) (keyboard.KeyEvent, int, parseStatus) {
 	if len(buf) == 0 {
-		return KeyEvent{}, 0, parseNeedMore
+		return keyboard.KeyEvent{}, 0, parseNeedMore
 	}
 
 	b := buf[0]
@@ -165,20 +166,20 @@ func (i *Parser) parseControlEvent(buf []byte) (KeyEvent, int, parseStatus) {
 	}
 	if b >= 0x01 && b <= 0x1a {
 		r := 'a' + rune(b) - 1
-		return KeyEvent{Code: KeyRune, Text: string(r), Mod: ModCtrl}, 1, parseDone
+		return keyboard.KeyEvent{Code: keyboard.KeyRune, Text: string(r), Mod: keyboard.ModCtrl}, 1, parseDone
 	}
-	return KeyEvent{}, 0, parseNoMatch
+	return keyboard.KeyEvent{}, 0, parseNoMatch
 }
 
-func (i *Parser) parseRuneEvent(buf []byte) (KeyEvent, int, parseStatus) {
+func (i *Parser) parseRuneEvent(buf []byte) (keyboard.KeyEvent, int, parseStatus) {
 	if !utf8.FullRune(buf) {
-		return KeyEvent{}, 0, parseNeedMore
+		return keyboard.KeyEvent{}, 0, parseNeedMore
 	}
 	r, n := utf8.DecodeRune(buf)
-	return KeyEvent{
-		Code: KeyRune,
+	return keyboard.KeyEvent{
+		Code: keyboard.KeyRune,
 		Text: string(r),
-		Mod:  ModNone,
+		Mod:  keyboard.ModNone,
 	}, n, parseDone
 }
 

@@ -6,8 +6,8 @@ import (
 
 	"github.com/NLipatov/tuigo/ansi"
 	"github.com/NLipatov/tuigo/core"
+	"github.com/NLipatov/tuigo/keyboard"
 	"github.com/NLipatov/tuigo/terminal"
-	"github.com/NLipatov/tuigo/terminal/input"
 	"github.com/rivo/uniseg"
 )
 
@@ -57,17 +57,17 @@ func main() {
 	}
 }
 
-func quitRequested(event input.KeyEvent) bool {
-	if event.Code == input.KeyEsc {
+func quitRequested(event keyboard.KeyEvent) bool {
+	if event.Code == keyboard.KeyEsc {
 		return true
 	}
-	if event.Code != input.KeyRune {
+	if event.Code != keyboard.KeyRune {
 		return false
 	}
 	if event.Text == "q" {
 		return true
 	}
-	return event.Text == "c" && event.Mod&input.ModCtrl != 0
+	return event.Text == "c" && event.Mod&keyboard.ModCtrl != 0
 }
 
 func renderHello(session *terminal.Session, width, height int) error {

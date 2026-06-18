@@ -1,6 +1,8 @@
 package terminal
 
 import (
+	"github.com/NLipatov/tuigo/keyboard"
+	"github.com/NLipatov/tuigo/mouse"
 	"github.com/NLipatov/tuigo/terminal/input"
 	"github.com/NLipatov/tuigo/terminal/resize"
 )
@@ -18,8 +20,8 @@ const (
 type Event struct {
 	Type   EventType
 	Err    error
-	Key    input.KeyEvent
-	Mouse  input.MouseEvent
+	Key    keyboard.KeyEvent
+	Mouse  mouse.MouseEvent
 	Resize resize.Event
 }
 

@@ -1,5 +1,10 @@
 package input
 
+import (
+	"github.com/NLipatov/tuigo/keyboard"
+	"github.com/NLipatov/tuigo/mouse"
+)
+
 type EventType int
 
 const (
@@ -10,6 +15,6 @@ const (
 
 type Event struct {
 	Type  EventType
-	Key   KeyEvent
-	Mouse MouseEvent
+	Key   keyboard.KeyEvent
+	Mouse mouse.MouseEvent
 }
