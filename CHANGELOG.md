@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.2.0](https://github.com/NLipatov/TuiGo/compare/v0.1.3...v0.2.0) (2026-06-18)
+
+
+### ⚠ BREAKING CHANGES
+
+* simplify public color and input APIs ([#13](https://github.com/NLipatov/TuiGo/issues/13))
+
+### Code Refactoring
+
+* simplify public color and input APIs ([#13](https://github.com/NLipatov/TuiGo/issues/13)) ([9987f57](https://github.com/NLipatov/TuiGo/commit/9987f5786300bea7eb38b7123d19c503e243147c))
+
 ## [0.1.3](https://github.com/NLipatov/TuiGo/compare/v0.1.2...v0.1.3) (2026-06-16)
 
 
