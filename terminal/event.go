@@ -3,7 +3,7 @@ package terminal
 import (
 	"github.com/NLipatov/tuigo/keyboard"
 	"github.com/NLipatov/tuigo/mouse"
-	"github.com/NLipatov/tuigo/terminal/input"
+	"github.com/NLipatov/tuigo/terminal/internal/input"
 	"github.com/NLipatov/tuigo/terminal/resize"
 )
 
