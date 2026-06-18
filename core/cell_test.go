@@ -4,7 +4,7 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/NLipatov/tuigo/ansi"
+	"github.com/NLipatov/tuigo/color"
 )
 
 func TestNewCellAcceptsSingleGraphemeCluster(t *testing.T) {
@@ -94,16 +94,78 @@ func TestNewCellRejectsInvalidGlyph(t *testing.T) {
 	}
 }
 
-func testColors(t *testing.T) (ansi.Color, ansi.Color) {
+func TestNewCellWithWidthAcceptsKnownWidth(t *testing.T) {
+	fg, bg := testColors(t)
+
+	tests := []struct {
+		glyph string
+		width int
+	}{
+		{glyph: "Ж", width: 1},
+		{glyph: "界", width: 2},
+	}
+
+	for _, tt := range tests {
+		cell, err := NewCellWithWidth(tt.glyph, tt.width, fg, bg)
+		if err != nil {
+			t.Fatalf("NewCellWithWidth() error = %v", err)
+		}
+		if cell.Glyph() != tt.glyph {
+			t.Fatalf("Glyph() = %q, want %q", cell.Glyph(), tt.glyph)
+		}
+		if cell.Width() != tt.width {
+			t.Fatalf("Width() = %d, want %d", cell.Width(), tt.width)
+		}
+		if cell.Foreground() != fg {
+			t.Fatalf("Foreground() = %#v, want %#v", cell.Foreground(), fg)
+		}
+		if cell.Background() != bg {
+			t.Fatalf("Background() = %#v, want %#v", cell.Background(), bg)
+		}
+	}
+}
+
+func TestNewCellWithWidthRejectsInvalidInput(t *testing.T) {
+	fg, bg := testColors(t)
+
+	tests := []struct {
+		name  string
+		glyph string
+		width int
+		want  error
+	}{
+		{
+			name:  "empty glyph",
+			glyph: "",
+			width: 1,
+			want:  ErrEmptyCellGlyph,
+		},
+		{
+			name:  "zero width",
+			glyph: "x",
+			width: 0,
+			want:  ErrUnsupportedCellWidth,
+		},
+		{
+			name:  "unsupported width",
+			glyph: "x",
+			width: 3,
+			want:  ErrUnsupportedCellWidth,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			_, err := NewCellWithWidth(tt.glyph, tt.width, fg, bg)
+			if !errors.Is(err, tt.want) {
+				t.Fatalf("NewCellWithWidth(%q, %d) error = %v, want %v", tt.glyph, tt.width, err, tt.want)
+			}
+		})
+	}
+}
+
+func testColors(t *testing.T) (color.Color, color.Color) {
 	t.Helper()
 
-	fg, err := ansi.NewColor(ansi.FG_RED)
-	if err != nil {
-		t.Fatalf("NewColor(%q) error = %v", ansi.FG_RED, err)
-	}
-	bg, err := ansi.NewColor(ansi.BG_BLACK)
-	if err != nil {
-		t.Fatalf("NewColor(%q) error = %v", ansi.BG_BLACK, err)
-	}
-	return fg, bg
+	return color.FgRed, color.BgBlack
 }

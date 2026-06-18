@@ -5,15 +5,20 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/NLipatov/tuigo/ansi"
+	"github.com/NLipatov/tuigo/color"
 	"github.com/NLipatov/tuigo/core"
+	"github.com/NLipatov/tuigo/internal/ansi"
 )
 
 func fullRepaintPrefix() string {
 	return string(ansi.CLEAR_SCREEN) + string(ansi.CURSOR_HOME)
 }
 
-func testCell(t testing.TB, glyph string, fg, bg ansi.Color) core.Cell {
+func colorString(c color.Color) string {
+	return string(colorEscape(c))
+}
+
+func testCell(t testing.TB, glyph string, fg, bg color.Color) core.Cell {
 	t.Helper()
 
 	cell, err := core.NewCell(glyph, fg, bg)
@@ -24,14 +29,7 @@ func testCell(t testing.TB, glyph string, fg, bg ansi.Color) core.Cell {
 }
 
 func TestRendererRenderWritesCell(t *testing.T) {
-	fg, err := ansi.NewColor(ansi.FG_RED)
-	if err != nil {
-		t.Fatalf("NewColor(%q) error = %v", ansi.FG_RED, err)
-	}
-	bg, err := ansi.NewColor(ansi.BG_BLACK)
-	if err != nil {
-		t.Fatalf("NewColor(%q) error = %v", ansi.BG_BLACK, err)
-	}
+	fg, bg := color.FgRed, color.BgBlack
 
 	frame, err := core.NewFrame(1, 1, []core.Cell{testCell(t, "x", fg, bg)})
 	if err != nil {
@@ -45,21 +43,14 @@ func TestRendererRenderWritesCell(t *testing.T) {
 		t.Fatalf("Render() error = %v", err)
 	}
 
-	want := fullRepaintPrefix() + "\x1b[1;1H" + string(ansi.FG_RED) + string(ansi.BG_BLACK) + "x"
+	want := fullRepaintPrefix() + "\x1b[1;1H" + colorString(color.FgRed) + colorString(color.BgBlack) + "x"
 	if got := out.String(); got != want {
 		t.Fatalf("rendered output = %q, want %q", got, want)
 	}
 }
 
 func TestRendererRenderWritesNothingWhenFrameIsUnchanged(t *testing.T) {
-	fg, err := ansi.NewColor(ansi.FG_RED)
-	if err != nil {
-		t.Fatalf("NewColor(%q) error = %v", ansi.FG_RED, err)
-	}
-	bg, err := ansi.NewColor(ansi.BG_BLACK)
-	if err != nil {
-		t.Fatalf("NewColor(%q) error = %v", ansi.BG_BLACK, err)
-	}
+	fg, bg := color.FgRed, color.BgBlack
 
 	frame, err := core.NewFrame(1, 1, []core.Cell{testCell(t, "x", fg, bg)})
 	if err != nil {
@@ -82,14 +73,7 @@ func TestRendererRenderWritesNothingWhenFrameIsUnchanged(t *testing.T) {
 }
 
 func TestRendererRenderWritesOnlyChangedCell(t *testing.T) {
-	fg, err := ansi.NewColor(ansi.FG_RED)
-	if err != nil {
-		t.Fatalf("NewColor(%q) error = %v", ansi.FG_RED, err)
-	}
-	bg, err := ansi.NewColor(ansi.BG_BLACK)
-	if err != nil {
-		t.Fatalf("NewColor(%q) error = %v", ansi.BG_BLACK, err)
-	}
+	fg, bg := color.FgRed, color.BgBlack
 
 	firstFrame, err := core.NewFrame(2, 1, []core.Cell{
 		testCell(t, "x", fg, bg),
@@ -117,25 +101,14 @@ func TestRendererRenderWritesOnlyChangedCell(t *testing.T) {
 		t.Fatalf("Render() error = %v", err)
 	}
 
-	want := "\x1b[1;2H" + string(ansi.FG_RED) + string(ansi.BG_BLACK) + "z"
+	want := "\x1b[1;2H" + colorString(color.FgRed) + colorString(color.BgBlack) + "z"
 	if got := out.String(); got != want {
 		t.Fatalf("rendered output = %q, want %q", got, want)
 	}
 }
 
 func TestRendererRenderWritesCellWhenOnlyStyleChanges(t *testing.T) {
-	red, err := ansi.NewColor(ansi.FG_RED)
-	if err != nil {
-		t.Fatalf("NewColor(%q) error = %v", ansi.FG_RED, err)
-	}
-	green, err := ansi.NewColor(ansi.FG_GREEN)
-	if err != nil {
-		t.Fatalf("NewColor(%q) error = %v", ansi.FG_GREEN, err)
-	}
-	bg, err := ansi.NewColor(ansi.BG_BLACK)
-	if err != nil {
-		t.Fatalf("NewColor(%q) error = %v", ansi.BG_BLACK, err)
-	}
+	red, green, bg := color.FgRed, color.FgGreen, color.BgBlack
 
 	firstFrame, err := core.NewFrame(1, 1, []core.Cell{testCell(t, "x", red, bg)})
 	if err != nil {
@@ -157,25 +130,14 @@ func TestRendererRenderWritesCellWhenOnlyStyleChanges(t *testing.T) {
 		t.Fatalf("Render() error = %v", err)
 	}
 
-	want := "\x1b[1;1H" + string(ansi.FG_GREEN) + string(ansi.BG_BLACK) + "x"
+	want := "\x1b[1;1H" + colorString(color.FgGreen) + colorString(color.BgBlack) + "x"
 	if got := out.String(); got != want {
 		t.Fatalf("rendered output = %q, want %q", got, want)
 	}
 }
 
 func TestRendererRenderReappliesBackgroundAfterForegroundReset(t *testing.T) {
-	title, err := ansi.NewColor(ansi.FG_BOLD_WHITE)
-	if err != nil {
-		t.Fatalf("NewColor(%q) error = %v", ansi.FG_BOLD_WHITE, err)
-	}
-	blank, err := ansi.NewColor(ansi.FG_WHITE)
-	if err != nil {
-		t.Fatalf("NewColor(%q) error = %v", ansi.FG_WHITE, err)
-	}
-	bg, err := ansi.NewColor(ansi.BG_BLACK)
-	if err != nil {
-		t.Fatalf("NewColor(%q) error = %v", ansi.BG_BLACK, err)
-	}
+	title, blank, bg := color.FgBoldWhite, color.FgWhite, color.BgBlack
 	frame, err := core.NewFrame(2, 1, []core.Cell{
 		testCell(t, "t", title, bg),
 		testCell(t, " ", blank, bg),
@@ -190,21 +152,14 @@ func TestRendererRenderReappliesBackgroundAfterForegroundReset(t *testing.T) {
 		t.Fatalf("Render() error = %v", err)
 	}
 
-	want := fullRepaintPrefix() + "\x1b[1;1H" + string(ansi.FG_BOLD_WHITE) + string(ansi.BG_BLACK) + "t" + string(ansi.FG_WHITE) + string(ansi.BG_BLACK) + " "
+	want := fullRepaintPrefix() + "\x1b[1;1H" + colorString(color.FgBoldWhite) + colorString(color.BgBlack) + "t" + colorString(color.FgWhite) + colorString(color.BgBlack) + " "
 	if got := out.String(); got != want {
 		t.Fatalf("rendered output = %q, want %q", got, want)
 	}
 }
 
 func TestRendererRenderSkipsContinuationCell(t *testing.T) {
-	fg, err := ansi.NewColor(ansi.FG_RED)
-	if err != nil {
-		t.Fatalf("NewColor(%q) error = %v", ansi.FG_RED, err)
-	}
-	bg, err := ansi.NewColor(ansi.BG_BLACK)
-	if err != nil {
-		t.Fatalf("NewColor(%q) error = %v", ansi.BG_BLACK, err)
-	}
+	fg, bg := color.FgRed, color.BgBlack
 
 	frame, err := core.NewFrame(4, 1, []core.Cell{
 		testCell(t, "A", fg, bg),
@@ -222,21 +177,14 @@ func TestRendererRenderSkipsContinuationCell(t *testing.T) {
 		t.Fatalf("Render() error = %v", err)
 	}
 
-	want := fullRepaintPrefix() + "\x1b[1;1H" + string(ansi.FG_RED) + string(ansi.BG_BLACK) + "A🙂B"
+	want := fullRepaintPrefix() + "\x1b[1;1H" + colorString(color.FgRed) + colorString(color.BgBlack) + "A🙂B"
 	if got := out.String(); got != want {
 		t.Fatalf("rendered output = %q, want %q", got, want)
 	}
 }
 
 func TestRendererRenderSkipsContinuationInChangedRun(t *testing.T) {
-	fg, err := ansi.NewColor(ansi.FG_RED)
-	if err != nil {
-		t.Fatalf("NewColor(%q) error = %v", ansi.FG_RED, err)
-	}
-	bg, err := ansi.NewColor(ansi.BG_BLACK)
-	if err != nil {
-		t.Fatalf("NewColor(%q) error = %v", ansi.BG_BLACK, err)
-	}
+	fg, bg := color.FgRed, color.BgBlack
 
 	firstFrame, err := core.NewFrame(4, 1, []core.Cell{
 		testCell(t, "A", fg, bg),
@@ -268,21 +216,14 @@ func TestRendererRenderSkipsContinuationInChangedRun(t *testing.T) {
 		t.Fatalf("Render() error = %v", err)
 	}
 
-	want := "\x1b[1;2H" + string(ansi.FG_RED) + string(ansi.BG_BLACK) + "🙂"
+	want := "\x1b[1;2H" + colorString(color.FgRed) + colorString(color.BgBlack) + "🙂"
 	if got := out.String(); got != want {
 		t.Fatalf("rendered output = %q, want %q", got, want)
 	}
 }
 
 func TestRendererRenderWritesAdjacentChangedCellsAsSingleRun(t *testing.T) {
-	fg, err := ansi.NewColor(ansi.FG_RED)
-	if err != nil {
-		t.Fatalf("NewColor(%q) error = %v", ansi.FG_RED, err)
-	}
-	bg, err := ansi.NewColor(ansi.BG_BLACK)
-	if err != nil {
-		t.Fatalf("NewColor(%q) error = %v", ansi.BG_BLACK, err)
-	}
+	fg, bg := color.FgRed, color.BgBlack
 	cell := func(symbol rune) core.Cell {
 		return testCell(t, string(symbol), fg, bg)
 	}
@@ -317,21 +258,14 @@ func TestRendererRenderWritesAdjacentChangedCellsAsSingleRun(t *testing.T) {
 		t.Fatalf("Render() error = %v", err)
 	}
 
-	want := "\x1b[1;2H" + string(ansi.FG_RED) + string(ansi.BG_BLACK) + "xy"
+	want := "\x1b[1;2H" + colorString(color.FgRed) + colorString(color.BgBlack) + "xy"
 	if got := out.String(); got != want {
 		t.Fatalf("rendered output = %q, want %q", got, want)
 	}
 }
 
 func TestRendererRenderWritesSeparatedChangedCellsAsSeparateRuns(t *testing.T) {
-	fg, err := ansi.NewColor(ansi.FG_RED)
-	if err != nil {
-		t.Fatalf("NewColor(%q) error = %v", ansi.FG_RED, err)
-	}
-	bg, err := ansi.NewColor(ansi.BG_BLACK)
-	if err != nil {
-		t.Fatalf("NewColor(%q) error = %v", ansi.BG_BLACK, err)
-	}
+	fg, bg := color.FgRed, color.BgBlack
 	cell := func(symbol rune) core.Cell {
 		return testCell(t, string(symbol), fg, bg)
 	}
@@ -366,21 +300,14 @@ func TestRendererRenderWritesSeparatedChangedCellsAsSeparateRuns(t *testing.T) {
 		t.Fatalf("Render() error = %v", err)
 	}
 
-	want := "\x1b[1;2H" + string(ansi.FG_RED) + string(ansi.BG_BLACK) + "x" + "\x1b[1;4H" + "y"
+	want := "\x1b[1;2H" + colorString(color.FgRed) + colorString(color.BgBlack) + "x" + "\x1b[1;4H" + "y"
 	if got := out.String(); got != want {
 		t.Fatalf("rendered output = %q, want %q", got, want)
 	}
 }
 
 func TestRendererRenderWritesFullFrameAfterResize(t *testing.T) {
-	fg, err := ansi.NewColor(ansi.FG_RED)
-	if err != nil {
-		t.Fatalf("NewColor(%q) error = %v", ansi.FG_RED, err)
-	}
-	bg, err := ansi.NewColor(ansi.BG_BLACK)
-	if err != nil {
-		t.Fatalf("NewColor(%q) error = %v", ansi.BG_BLACK, err)
-	}
+	fg, bg := color.FgRed, color.BgBlack
 
 	firstFrame, err := core.NewFrame(1, 1, []core.Cell{testCell(t, "x", fg, bg)})
 	if err != nil {
@@ -405,21 +332,14 @@ func TestRendererRenderWritesFullFrameAfterResize(t *testing.T) {
 		t.Fatalf("Render() error = %v", err)
 	}
 
-	want := fullRepaintPrefix() + "\x1b[1;1H" + string(ansi.FG_RED) + string(ansi.BG_BLACK) + "yz"
+	want := fullRepaintPrefix() + "\x1b[1;1H" + colorString(color.FgRed) + colorString(color.BgBlack) + "yz"
 	if got := out.String(); got != want {
 		t.Fatalf("rendered output = %q, want %q", got, want)
 	}
 }
 
 func TestRendererRenderRetriesFullFrameAfterWriteError(t *testing.T) {
-	fg, err := ansi.NewColor(ansi.FG_RED)
-	if err != nil {
-		t.Fatalf("NewColor(%q) error = %v", ansi.FG_RED, err)
-	}
-	bg, err := ansi.NewColor(ansi.BG_BLACK)
-	if err != nil {
-		t.Fatalf("NewColor(%q) error = %v", ansi.BG_BLACK, err)
-	}
+	fg, bg := color.FgRed, color.BgBlack
 
 	frame, err := core.NewFrame(1, 1, []core.Cell{testCell(t, "x", fg, bg)})
 	if err != nil {
@@ -438,21 +358,14 @@ func TestRendererRenderRetriesFullFrameAfterWriteError(t *testing.T) {
 		t.Fatalf("Render() error = %v", err)
 	}
 
-	want := fullRepaintPrefix() + "\x1b[1;1H" + string(ansi.FG_RED) + string(ansi.BG_BLACK) + "x"
+	want := fullRepaintPrefix() + "\x1b[1;1H" + colorString(color.FgRed) + colorString(color.BgBlack) + "x"
 	if got := writer.out.String(); got != want {
 		t.Fatalf("rendered output = %q, want %q", got, want)
 	}
 }
 
 func TestRendererRenderDoesNotAllocateWhenFrameIsUnchanged(t *testing.T) {
-	fg, err := ansi.NewColor(ansi.FG_RED)
-	if err != nil {
-		t.Fatalf("NewColor(%q) error = %v", ansi.FG_RED, err)
-	}
-	bg, err := ansi.NewColor(ansi.BG_BLACK)
-	if err != nil {
-		t.Fatalf("NewColor(%q) error = %v", ansi.BG_BLACK, err)
-	}
+	fg, bg := color.FgRed, color.BgBlack
 
 	frame, err := core.NewFrame(1, 1, []core.Cell{testCell(t, "x", fg, bg)})
 	if err != nil {
@@ -473,14 +386,7 @@ func TestRendererRenderDoesNotAllocateWhenFrameIsUnchanged(t *testing.T) {
 }
 
 func TestRendererRenderDoesNotAllocateWhenRenderingFullFrame(t *testing.T) {
-	fg, err := ansi.NewColor(ansi.FG_RED)
-	if err != nil {
-		t.Fatalf("NewColor(%q) error = %v", ansi.FG_RED, err)
-	}
-	bg, err := ansi.NewColor(ansi.BG_BLACK)
-	if err != nil {
-		t.Fatalf("NewColor(%q) error = %v", ansi.BG_BLACK, err)
-	}
+	fg, bg := color.FgRed, color.BgBlack
 
 	frame, err := core.NewFrame(1, 1, []core.Cell{testCell(t, "x", fg, bg)})
 	if err != nil {
@@ -501,14 +407,7 @@ func TestRendererRenderDoesNotAllocateWhenRenderingFullFrame(t *testing.T) {
 }
 
 func TestRendererRenderDoesNotAllocateWhenRenderingChangedCell(t *testing.T) {
-	fg, err := ansi.NewColor(ansi.FG_RED)
-	if err != nil {
-		t.Fatalf("NewColor(%q) error = %v", ansi.FG_RED, err)
-	}
-	bg, err := ansi.NewColor(ansi.BG_BLACK)
-	if err != nil {
-		t.Fatalf("NewColor(%q) error = %v", ansi.BG_BLACK, err)
-	}
+	fg, bg := color.FgRed, color.BgBlack
 
 	firstFrame, err := core.NewFrame(1, 1, []core.Cell{testCell(t, "x", fg, bg)})
 	if err != nil {
@@ -663,15 +562,7 @@ func benchmarkFrameWithRun(b *testing.B, width, height int, symbol, runSymbol ru
 func benchmarkCell(b *testing.B, symbol rune) core.Cell {
 	b.Helper()
 
-	fg, err := ansi.NewColor(ansi.FG_RED)
-	if err != nil {
-		b.Fatalf("NewColor(%q) error = %v", ansi.FG_RED, err)
-	}
-	bg, err := ansi.NewColor(ansi.BG_BLACK)
-	if err != nil {
-		b.Fatalf("NewColor(%q) error = %v", ansi.BG_BLACK, err)
-	}
-	cell, err := core.NewCell(string(symbol), fg, bg)
+	cell, err := core.NewCell(string(symbol), color.FgRed, color.BgBlack)
 	if err != nil {
 		b.Fatalf("core.NewCell(%q) error = %v", string(symbol), err)
 	}

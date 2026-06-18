@@ -8,6 +8,8 @@ import (
 	"sync/atomic"
 	"testing"
 	"time"
+
+	"github.com/NLipatov/tuigo/keyboard"
 )
 
 func TestNewInputListenerRejectsNilDependencies(t *testing.T) {
@@ -88,10 +90,10 @@ func TestInputListenerListenFeedsParserAndEmitsEvents(t *testing.T) {
 		t.Fatalf("Listen() error = %v, want %v", err, readErr)
 	}
 
-	wantEvents := []KeyEvent{
-		{Code: KeyRune, Text: "a", Mod: ModNone},
-		{Code: KeyRune, Text: "b", Mod: ModNone},
-		{Code: KeyRune, Text: "c", Mod: ModNone},
+	wantEvents := []keyboard.KeyEvent{
+		{Code: keyboard.KeyRune, Text: "a", Mod: keyboard.ModNone},
+		{Code: keyboard.KeyRune, Text: "b", Mod: keyboard.ModNone},
+		{Code: keyboard.KeyRune, Text: "c", Mod: keyboard.ModNone},
 	}
 	for idx, want := range wantEvents {
 		got := <-out
@@ -124,7 +126,7 @@ func TestInputListenerListenFlushesPendingEscapeAfterTimeout(t *testing.T) {
 	}()
 
 	got := receiveInputEvent(t, out)
-	if want := (Event{Type: EventTypeKey, Key: KeyEvent{Code: KeyEsc}}); got != want {
+	if want := (Event{Type: EventTypeKey, Key: keyboard.KeyEvent{Code: keyboard.KeyEsc}}); got != want {
 		t.Fatalf("event = %#v, want %#v", got, want)
 	}
 

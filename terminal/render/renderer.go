@@ -4,14 +4,15 @@ import (
 	"io"
 	"strconv"
 
-	"github.com/NLipatov/tuigo/ansi"
+	"github.com/NLipatov/tuigo/color"
 	"github.com/NLipatov/tuigo/core"
+	"github.com/NLipatov/tuigo/internal/ansi"
 )
 
 const estimatedCellBytes = 36
 
 type renderStyle struct {
-	fg, bg ansi.Color
+	fg, bg color.Color
 	set    bool
 }
 
@@ -139,11 +140,11 @@ func (r *Renderer) cursorMove(x, y int) {
 func (r *Renderer) renderStyle(cell core.Cell) {
 	fgChanged := !r.style.set || r.style.fg != cell.Foreground()
 	if fgChanged {
-		r.out = append(r.out, cell.Foreground().String()...)
+		r.out = append(r.out, colorEscape(cell.Foreground())...)
 		r.style.fg = cell.Foreground()
 	}
 	if !r.style.set || fgChanged || r.style.bg != cell.Background() {
-		r.out = append(r.out, cell.Background().String()...)
+		r.out = append(r.out, colorEscape(cell.Background())...)
 		r.style.bg = cell.Background()
 	}
 	r.style.set = true

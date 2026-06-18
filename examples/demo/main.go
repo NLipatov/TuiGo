@@ -8,10 +8,11 @@ import (
 	"strings"
 	"time"
 
-	"github.com/NLipatov/tuigo/ansi"
+	"github.com/NLipatov/tuigo/color"
 	"github.com/NLipatov/tuigo/core"
+	"github.com/NLipatov/tuigo/keyboard"
+	"github.com/NLipatov/tuigo/mouse"
 	"github.com/NLipatov/tuigo/terminal"
-	"github.com/NLipatov/tuigo/terminal/input"
 	"github.com/rivo/uniseg"
 )
 
@@ -26,34 +27,34 @@ const (
 )
 
 var keyCodeLabels = [...]string{
-	input.KeyUnknown:   "unknown",
-	input.KeyRune:      "rune",
-	input.KeyEnter:     "enter",
-	input.KeyEsc:       "esc",
-	input.KeyTab:       "tab",
-	input.KeyBackspace: "backspace",
-	input.KeyDelete:    "delete",
-	input.KeyInsert:    "insert",
-	input.KeyUp:        "up",
-	input.KeyDown:      "down",
-	input.KeyLeft:      "left",
-	input.KeyRight:     "right",
-	input.KeyHome:      "home",
-	input.KeyEnd:       "end",
-	input.KeyPageUp:    "page-up",
-	input.KeyPageDown:  "page-down",
-	input.KeyF1:        "f1",
-	input.KeyF2:        "f2",
-	input.KeyF3:        "f3",
-	input.KeyF4:        "f4",
-	input.KeyF5:        "f5",
-	input.KeyF6:        "f6",
-	input.KeyF7:        "f7",
-	input.KeyF8:        "f8",
-	input.KeyF9:        "f9",
-	input.KeyF10:       "f10",
-	input.KeyF11:       "f11",
-	input.KeyF12:       "f12",
+	keyboard.KeyUnknown:   "unknown",
+	keyboard.KeyRune:      "rune",
+	keyboard.KeyEnter:     "enter",
+	keyboard.KeyEsc:       "esc",
+	keyboard.KeyTab:       "tab",
+	keyboard.KeyBackspace: "backspace",
+	keyboard.KeyDelete:    "delete",
+	keyboard.KeyInsert:    "insert",
+	keyboard.KeyUp:        "up",
+	keyboard.KeyDown:      "down",
+	keyboard.KeyLeft:      "left",
+	keyboard.KeyRight:     "right",
+	keyboard.KeyHome:      "home",
+	keyboard.KeyEnd:       "end",
+	keyboard.KeyPageUp:    "page-up",
+	keyboard.KeyPageDown:  "page-down",
+	keyboard.KeyF1:        "f1",
+	keyboard.KeyF2:        "f2",
+	keyboard.KeyF3:        "f3",
+	keyboard.KeyF4:        "f4",
+	keyboard.KeyF5:        "f5",
+	keyboard.KeyF6:        "f6",
+	keyboard.KeyF7:        "f7",
+	keyboard.KeyF8:        "f8",
+	keyboard.KeyF9:        "f9",
+	keyboard.KeyF10:       "f10",
+	keyboard.KeyF11:       "f11",
+	keyboard.KeyF12:       "f12",
 }
 
 func main() {
@@ -136,7 +137,7 @@ func handleEvent(state *demoState, cancel context.CancelFunc, event terminal.Eve
 			cancel()
 			return true
 		}
-		if event.Key.Code == input.KeyRune && event.Key.Text == "r" {
+		if event.Key.Code == keyboard.KeyRune && event.Key.Text == "r" {
 			state.frame = 0
 			state.events = 0
 			state.log = []string{"0000  reset"}
@@ -381,16 +382,16 @@ func medianDrawDuration(samples []time.Duration) time.Duration {
 }
 
 type demoPalette struct {
-	bg     ansi.Color
-	fg     ansi.Color
-	accent ansi.Color
+	bg     color.Color
+	fg     color.Color
+	accent color.Color
 }
 
 func newDemoPalette() demoPalette {
 	return demoPalette{
-		bg:     mustColor(ansi.BG_BLACK),
-		fg:     mustColor(ansi.FG_GREEN),
-		accent: mustColor(ansi.FG_BOLD_GREEN),
+		bg:     color.BgBlack,
+		fg:     color.FgGreen,
+		accent: color.FgBoldGreen,
 	}
 }
 
@@ -402,7 +403,7 @@ func demoBounds(width, height int) (int, int, int, int) {
 	return left, top, boxWidth, boxHeight
 }
 
-func drawBox(cells []core.Cell, width, height, left, top, boxWidth, boxHeight int, fg, bg ansi.Color) {
+func drawBox(cells []core.Cell, width, height, left, top, boxWidth, boxHeight int, fg, bg color.Color) {
 	if boxWidth < 2 || boxHeight < 2 {
 		return
 	}
@@ -422,7 +423,7 @@ func drawBox(cells []core.Cell, width, height, left, top, boxWidth, boxHeight in
 	}
 }
 
-func drawSeparator(cells []core.Cell, width, height, left, y, lineWidth int, fg, bg ansi.Color) {
+func drawSeparator(cells []core.Cell, width, height, left, y, lineWidth int, fg, bg color.Color) {
 	putCell(cells, width, height, left, y, mustCell("├", fg, bg))
 	putCell(cells, width, height, left+lineWidth-1, y, mustCell("┤", fg, bg))
 	for x := 1; x < lineWidth-1; x++ {
@@ -430,7 +431,7 @@ func drawSeparator(cells []core.Cell, width, height, left, y, lineWidth int, fg,
 	}
 }
 
-func drawText(cells []core.Cell, width, height, left, y int, text string, fg, bg ansi.Color) {
+func drawText(cells []core.Cell, width, height, left, y int, text string, fg, bg color.Color) {
 	x := left
 	for text != "" {
 		glyph, rest, _, _ := uniseg.FirstGraphemeClusterInString(text, -1)
@@ -447,7 +448,7 @@ func drawText(cells []core.Cell, width, height, left, y int, text string, fg, bg
 	}
 }
 
-func drawTextClipped(cells []core.Cell, width, height, left, y, maxWidth int, text string, fg, bg ansi.Color) {
+func drawTextClipped(cells []core.Cell, width, height, left, y, maxWidth int, text string, fg, bg color.Color) {
 	drawText(cells, width, height, left, y, trimLabel(text, maxWidth), fg, bg)
 }
 
@@ -458,20 +459,20 @@ func putCell(cells []core.Cell, width, height, x, y int, cell core.Cell) {
 	cells[y*width+x] = cell
 }
 
-func keyLabel(event input.KeyEvent) string {
+func keyLabel(event keyboard.KeyEvent) string {
 	var text string
-	if event.Code == input.KeyRune {
+	if event.Code == keyboard.KeyRune {
 		text = keyTextLabel(event.Text)
 	} else {
 		text = keyCodeLabel(event.Code)
 	}
-	if event.Mod == input.ModNone {
+	if event.Mod == keyboard.ModNone {
 		return text
 	}
 	return modLabel(event.Mod) + "+" + text
 }
 
-func keyCodeLabel(code input.KeyCode) string {
+func keyCodeLabel(code keyboard.KeyCode) string {
 	idx := int(code)
 	if idx >= 0 && idx < len(keyCodeLabels) && keyCodeLabels[idx] != "" {
 		return keyCodeLabels[idx]
@@ -508,73 +509,73 @@ func runeCodepointLabel(r rune) string {
 	return "U+" + code
 }
 
-func mouseLabel(event input.MouseEvent) string {
+func mouseLabel(event mouse.MouseEvent) string {
 	label := "mouse " + mouseButtonLabel(event.Button) + " " +
 		mouseActionLabel(event.Action) + " " +
 		intLabel(event.X) + "," + intLabel(event.Y)
-	if event.Mod == input.ModNone {
+	if event.Mod == keyboard.ModNone {
 		return label
 	}
 	return modLabel(event.Mod) + " " + label
 }
 
-func mouseButtonLabel(button input.MouseButton) string {
+func mouseButtonLabel(button mouse.MouseButton) string {
 	switch button {
-	case input.MouseButtonLeft:
+	case mouse.MouseButtonLeft:
 		return "left"
-	case input.MouseButtonMiddle:
+	case mouse.MouseButtonMiddle:
 		return "middle"
-	case input.MouseButtonRight:
+	case mouse.MouseButtonRight:
 		return "right"
-	case input.MouseButtonWheelUp:
+	case mouse.MouseButtonWheelUp:
 		return "wheel-up"
-	case input.MouseButtonWheelDown:
+	case mouse.MouseButtonWheelDown:
 		return "wheel-down"
 	default:
 		return "unknown"
 	}
 }
 
-func mouseActionLabel(action input.MouseAction) string {
+func mouseActionLabel(action mouse.MouseAction) string {
 	switch action {
-	case input.MouseActionPress:
+	case mouse.MouseActionPress:
 		return "press"
-	case input.MouseActionRelease:
+	case mouse.MouseActionRelease:
 		return "release"
-	case input.MouseActionDrag:
+	case mouse.MouseActionDrag:
 		return "drag"
-	case input.MouseActionWheel:
+	case mouse.MouseActionWheel:
 		return "wheel"
 	default:
 		return "unknown"
 	}
 }
 
-func modLabel(mod input.KeyMod) string {
+func modLabel(mod keyboard.KeyMod) string {
 	parts := make([]string, 0, 3)
-	if mod&input.ModCtrl != 0 {
+	if mod&keyboard.ModCtrl != 0 {
 		parts = append(parts, "ctrl")
 	}
-	if mod&input.ModAlt != 0 {
+	if mod&keyboard.ModAlt != 0 {
 		parts = append(parts, "alt")
 	}
-	if mod&input.ModShift != 0 {
+	if mod&keyboard.ModShift != 0 {
 		parts = append(parts, "shift")
 	}
 	return strings.Join(parts, "+")
 }
 
-func quitRequested(event input.KeyEvent) bool {
-	if event.Code == input.KeyEsc {
+func quitRequested(event keyboard.KeyEvent) bool {
+	if event.Code == keyboard.KeyEsc {
 		return true
 	}
-	if event.Code != input.KeyRune {
+	if event.Code != keyboard.KeyRune {
 		return false
 	}
 	if event.Text == "q" {
 		return true
 	}
-	return event.Text == "c" && event.Mod&input.ModCtrl != 0
+	return event.Text == "c" && event.Mod&keyboard.ModCtrl != 0
 }
 
 func trimLabel(text string, limit int) string {
@@ -612,15 +613,7 @@ func displayWidth(text string) int {
 	return width
 }
 
-func mustColor(sequence ansi.ANSIEscapeSequence) ansi.Color {
-	color, err := ansi.NewColor(sequence)
-	if err != nil {
-		panic(err)
-	}
-	return color
-}
-
-func mustCell(text string, fg, bg ansi.Color) core.Cell {
+func mustCell(text string, fg, bg color.Color) core.Cell {
 	cell, err := core.NewCell(text, fg, bg)
 	if err != nil {
 		panic(err)

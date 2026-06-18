@@ -1,10 +1,12 @@
-package input
+package mouse
+
+import "github.com/NLipatov/tuigo/keyboard"
 
 type MouseEvent struct {
 	X, Y   int
 	Button MouseButton
 	Action MouseAction
-	Mod    KeyMod
+	Mod    keyboard.KeyMod
 }
 
 type MouseButton int

@@ -1,4 +1,4 @@
-package input
+package keyboard
 
 type KeyEvent struct {
 	Code KeyCode

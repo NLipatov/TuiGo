@@ -4,10 +4,10 @@ import (
 	"context"
 	"os"
 
-	"github.com/NLipatov/tuigo/ansi"
+	"github.com/NLipatov/tuigo/color"
 	"github.com/NLipatov/tuigo/core"
+	"github.com/NLipatov/tuigo/keyboard"
 	"github.com/NLipatov/tuigo/terminal"
-	"github.com/NLipatov/tuigo/terminal/input"
 	"github.com/rivo/uniseg"
 )
 
@@ -57,17 +57,17 @@ func main() {
 	}
 }
 
-func quitRequested(event input.KeyEvent) bool {
-	if event.Code == input.KeyEsc {
+func quitRequested(event keyboard.KeyEvent) bool {
+	if event.Code == keyboard.KeyEsc {
 		return true
 	}
-	if event.Code != input.KeyRune {
+	if event.Code != keyboard.KeyRune {
 		return false
 	}
 	if event.Text == "q" {
 		return true
 	}
-	return event.Text == "c" && event.Mod&input.ModCtrl != 0
+	return event.Text == "c" && event.Mod&keyboard.ModCtrl != 0
 }
 
 func renderHello(session *terminal.Session, width, height int) error {
@@ -111,19 +111,19 @@ type palette struct {
 	blank  core.Cell
 	logo   core.Cell
 	shadow core.Cell
-	title  ansi.Color
-	hint   ansi.Color
-	bg     ansi.Color
+	title  color.Color
+	hint   color.Color
+	bg     color.Color
 }
 
 func newPalette() palette {
-	bg := mustColor(ansi.BG_BLACK)
+	bg := color.BgBlack
 	return palette{
-		blank:  mustCell(" ", mustColor(ansi.FG_WHITE), bg),
-		logo:   mustCell("=", mustColor(ansi.FG_BOLD_GREEN), bg),
-		shadow: mustCell(".", mustColor(ansi.FG_HIGH_INTENSITY_BLACK), bg),
-		title:  mustColor(ansi.FG_GREEN),
-		hint:   mustColor(ansi.FG_HIGH_INTENSITY_BLACK),
+		blank:  mustCell(" ", color.FgWhite, bg),
+		logo:   mustCell("=", color.FgBoldGreen, bg),
+		shadow: mustCell(".", color.FgHighIntensityBlack, bg),
+		title:  color.FgGreen,
+		hint:   color.FgHighIntensityBlack,
 		bg:     bg,
 	}
 }
@@ -138,7 +138,7 @@ func drawLogo(cells []core.Cell, width, height, left, top int, cell core.Cell) {
 	}
 }
 
-func drawText(cells []core.Cell, width, height, left, y int, text string, fg, bg ansi.Color) {
+func drawText(cells []core.Cell, width, height, left, y int, text string, fg, bg color.Color) {
 	x := left
 	for text != "" {
 		glyph, rest, _, _ := uniseg.FirstGraphemeClusterInString(text, -1)
@@ -178,15 +178,7 @@ func logoHeight() int {
 	return len(helloLogo)
 }
 
-func mustColor(sequence ansi.ANSIEscapeSequence) ansi.Color {
-	color, err := ansi.NewColor(sequence)
-	if err != nil {
-		panic(err)
-	}
-	return color
-}
-
-func mustCell(text string, fg, bg ansi.Color) core.Cell {
+func mustCell(text string, fg, bg color.Color) core.Cell {
 	cell, err := core.NewCell(text, fg, bg)
 	if err != nil {
 		panic(err)

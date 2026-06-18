@@ -1,6 +1,11 @@
 package input
 
-import "strings"
+import (
+	"strings"
+
+	"github.com/NLipatov/tuigo/keyboard"
+	"github.com/NLipatov/tuigo/mouse"
+)
 
 const (
 	sgrMousePressFinal   = 'M'
@@ -23,18 +28,18 @@ func isSGRMouseSequence(params string, final byte) bool {
 		(final == sgrMousePressFinal || final == sgrMouseReleaseFinal)
 }
 
-func mouseEventFromSGR(params string, final byte) (MouseEvent, bool) {
+func mouseEventFromSGR(params string, final byte) (mouse.MouseEvent, bool) {
 	values := splitCSIParams(strings.TrimPrefix(params, "<"))
 	if len(values) != 3 {
-		return MouseEvent{}, false
+		return mouse.MouseEvent{}, false
 	}
 
 	code, x, y := values[0], values[1], values[2]
 	if x < 1 || y < 1 {
-		return MouseEvent{}, false
+		return mouse.MouseEvent{}, false
 	}
 
-	return MouseEvent{
+	return mouse.MouseEvent{
 		X:      x - 1,
 		Y:      y - 1,
 		Button: mouseButtonFromSGR(code),
@@ -43,54 +48,54 @@ func mouseEventFromSGR(params string, final byte) (MouseEvent, bool) {
 	}, true
 }
 
-func mouseButtonFromSGR(code int) MouseButton {
+func mouseButtonFromSGR(code int) mouse.MouseButton {
 	button := code & sgrMouseButtonMask
 	if code&sgrMouseWheelMask != 0 {
 		switch button {
 		case 0:
-			return MouseButtonWheelUp
+			return mouse.MouseButtonWheelUp
 		case 1:
-			return MouseButtonWheelDown
+			return mouse.MouseButtonWheelDown
 		default:
-			return MouseButtonUnknown
+			return mouse.MouseButtonUnknown
 		}
 	}
 
 	switch button {
 	case 0:
-		return MouseButtonLeft
+		return mouse.MouseButtonLeft
 	case 1:
-		return MouseButtonMiddle
+		return mouse.MouseButtonMiddle
 	case 2:
-		return MouseButtonRight
+		return mouse.MouseButtonRight
 	default:
-		return MouseButtonUnknown
+		return mouse.MouseButtonUnknown
 	}
 }
 
-func mouseActionFromSGR(code int, final byte) MouseAction {
+func mouseActionFromSGR(code int, final byte) mouse.MouseAction {
 	if code&sgrMouseWheelMask != 0 {
-		return MouseActionWheel
+		return mouse.MouseActionWheel
 	}
 	if final == sgrMouseReleaseFinal {
-		return MouseActionRelease
+		return mouse.MouseActionRelease
 	}
 	if code&sgrMouseDragMask != 0 {
-		return MouseActionDrag
+		return mouse.MouseActionDrag
 	}
-	return MouseActionPress
+	return mouse.MouseActionPress
 }
 
-func mouseModFromSGR(code int) KeyMod {
-	var mod KeyMod
+func mouseModFromSGR(code int) keyboard.KeyMod {
+	var mod keyboard.KeyMod
 	if code&sgrMouseShiftMask != 0 {
-		mod |= ModShift
+		mod |= keyboard.ModShift
 	}
 	if code&sgrMouseAltMask != 0 {
-		mod |= ModAlt
+		mod |= keyboard.ModAlt
 	}
 	if code&sgrMouseCtrlMask != 0 {
-		mod |= ModCtrl
+		mod |= keyboard.ModCtrl
 	}
 	return mod
 }
@@ -105,20 +110,20 @@ func legacyMouseEventFromCSI(buf []byte) (Event, int, parseStatus) {
 
 	mouse, ok := mouseEventFromLegacy(buf[3], buf[4], buf[5])
 	if !ok {
-		return Event{Type: EventTypeKey, Key: KeyEvent{Code: KeyUnknown}}, legacyMouseSequenceLen, parseDone
+		return Event{Type: EventTypeKey, Key: keyboard.KeyEvent{Code: keyboard.KeyUnknown}}, legacyMouseSequenceLen, parseDone
 	}
 	return Event{Type: EventTypeMouse, Mouse: mouse}, legacyMouseSequenceLen, parseDone
 }
 
-func mouseEventFromLegacy(codeByte, xByte, yByte byte) (MouseEvent, bool) {
+func mouseEventFromLegacy(codeByte, xByte, yByte byte) (mouse.MouseEvent, bool) {
 	code := int(codeByte) - legacyMouseEncodingBase
 	x := int(xByte) - legacyMouseEncodingBase - 1
 	y := int(yByte) - legacyMouseEncodingBase - 1
 	if code < 0 || x < 0 || y < 0 {
-		return MouseEvent{}, false
+		return mouse.MouseEvent{}, false
 	}
 
-	return MouseEvent{
+	return mouse.MouseEvent{
 		X:      x,
 		Y:      y,
 		Button: mouseButtonFromLegacy(code),
@@ -127,25 +132,25 @@ func mouseEventFromLegacy(codeByte, xByte, yByte byte) (MouseEvent, bool) {
 	}, true
 }
 
-func mouseButtonFromLegacy(code int) MouseButton {
+func mouseButtonFromLegacy(code int) mouse.MouseButton {
 	if code&sgrMouseWheelMask != 0 {
 		return mouseButtonFromSGR(code)
 	}
 	if code&sgrMouseButtonMask == sgrMouseButtonMask {
-		return MouseButtonUnknown
+		return mouse.MouseButtonUnknown
 	}
 	return mouseButtonFromSGR(code)
 }
 
-func mouseActionFromLegacy(code int) MouseAction {
+func mouseActionFromLegacy(code int) mouse.MouseAction {
 	if code&sgrMouseWheelMask != 0 {
-		return MouseActionWheel
+		return mouse.MouseActionWheel
 	}
 	if code&sgrMouseButtonMask == sgrMouseButtonMask {
-		return MouseActionRelease
+		return mouse.MouseActionRelease
 	}
 	if code&sgrMouseDragMask != 0 {
-		return MouseActionDrag
+		return mouse.MouseActionDrag
 	}
-	return MouseActionPress
+	return mouse.MouseActionPress
 }
