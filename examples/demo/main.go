@@ -8,7 +8,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/NLipatov/tuigo/ansi"
+	"github.com/NLipatov/tuigo/color"
 	"github.com/NLipatov/tuigo/core"
 	"github.com/NLipatov/tuigo/keyboard"
 	"github.com/NLipatov/tuigo/mouse"
@@ -382,16 +382,16 @@ func medianDrawDuration(samples []time.Duration) time.Duration {
 }
 
 type demoPalette struct {
-	bg     ansi.Color
-	fg     ansi.Color
-	accent ansi.Color
+	bg     color.Color
+	fg     color.Color
+	accent color.Color
 }
 
 func newDemoPalette() demoPalette {
 	return demoPalette{
-		bg:     mustColor(ansi.BG_BLACK),
-		fg:     mustColor(ansi.FG_GREEN),
-		accent: mustColor(ansi.FG_BOLD_GREEN),
+		bg:     color.BgBlack,
+		fg:     color.FgGreen,
+		accent: color.FgBoldGreen,
 	}
 }
 
@@ -403,7 +403,7 @@ func demoBounds(width, height int) (int, int, int, int) {
 	return left, top, boxWidth, boxHeight
 }
 
-func drawBox(cells []core.Cell, width, height, left, top, boxWidth, boxHeight int, fg, bg ansi.Color) {
+func drawBox(cells []core.Cell, width, height, left, top, boxWidth, boxHeight int, fg, bg color.Color) {
 	if boxWidth < 2 || boxHeight < 2 {
 		return
 	}
@@ -423,7 +423,7 @@ func drawBox(cells []core.Cell, width, height, left, top, boxWidth, boxHeight in
 	}
 }
 
-func drawSeparator(cells []core.Cell, width, height, left, y, lineWidth int, fg, bg ansi.Color) {
+func drawSeparator(cells []core.Cell, width, height, left, y, lineWidth int, fg, bg color.Color) {
 	putCell(cells, width, height, left, y, mustCell("├", fg, bg))
 	putCell(cells, width, height, left+lineWidth-1, y, mustCell("┤", fg, bg))
 	for x := 1; x < lineWidth-1; x++ {
@@ -431,7 +431,7 @@ func drawSeparator(cells []core.Cell, width, height, left, y, lineWidth int, fg,
 	}
 }
 
-func drawText(cells []core.Cell, width, height, left, y int, text string, fg, bg ansi.Color) {
+func drawText(cells []core.Cell, width, height, left, y int, text string, fg, bg color.Color) {
 	x := left
 	for text != "" {
 		glyph, rest, _, _ := uniseg.FirstGraphemeClusterInString(text, -1)
@@ -448,7 +448,7 @@ func drawText(cells []core.Cell, width, height, left, y int, text string, fg, bg
 	}
 }
 
-func drawTextClipped(cells []core.Cell, width, height, left, y, maxWidth int, text string, fg, bg ansi.Color) {
+func drawTextClipped(cells []core.Cell, width, height, left, y, maxWidth int, text string, fg, bg color.Color) {
 	drawText(cells, width, height, left, y, trimLabel(text, maxWidth), fg, bg)
 }
 
@@ -613,15 +613,7 @@ func displayWidth(text string) int {
 	return width
 }
 
-func mustColor(sequence ansi.ANSIEscapeSequence) ansi.Color {
-	color, err := ansi.NewColor(sequence)
-	if err != nil {
-		panic(err)
-	}
-	return color
-}
-
-func mustCell(text string, fg, bg ansi.Color) core.Cell {
+func mustCell(text string, fg, bg color.Color) core.Cell {
 	cell, err := core.NewCell(text, fg, bg)
 	if err != nil {
 		panic(err)

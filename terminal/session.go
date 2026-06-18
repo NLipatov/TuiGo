@@ -7,8 +7,8 @@ import (
 	"io"
 	"os"
 
-	"github.com/NLipatov/tuigo/ansi"
 	"github.com/NLipatov/tuigo/core"
+	"github.com/NLipatov/tuigo/internal/ansi"
 	"github.com/NLipatov/tuigo/terminal/internal/input"
 	"github.com/NLipatov/tuigo/terminal/render"
 	"github.com/NLipatov/tuigo/terminal/resize"

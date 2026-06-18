@@ -8,8 +8,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/NLipatov/tuigo/ansi"
+	"github.com/NLipatov/tuigo/color"
 	"github.com/NLipatov/tuigo/core"
+	"github.com/NLipatov/tuigo/internal/ansi"
 	"github.com/NLipatov/tuigo/keyboard"
 	"github.com/NLipatov/tuigo/mouse"
 	"github.com/NLipatov/tuigo/terminal/internal/input"
@@ -35,15 +36,7 @@ func TestNewSessionWiresRendererToSessionOutput(t *testing.T) {
 		t.Fatalf("NewSession() error = %v", err)
 	}
 
-	fg, err := ansi.NewColor(ansi.FG_RED)
-	if err != nil {
-		t.Fatalf("NewColor(%q) error = %v", ansi.FG_RED, err)
-	}
-	bg, err := ansi.NewColor(ansi.BG_BLACK)
-	if err != nil {
-		t.Fatalf("NewColor(%q) error = %v", ansi.BG_BLACK, err)
-	}
-	cell, err := core.NewCell("x", fg, bg)
+	cell, err := core.NewCell("x", color.FgRed, color.BgBlack)
 	if err != nil {
 		t.Fatalf("core.NewCell(%q) error = %v", "x", err)
 	}

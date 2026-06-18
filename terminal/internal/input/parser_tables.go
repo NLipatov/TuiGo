@@ -1,7 +1,7 @@
 package input
 
 import (
-	"github.com/NLipatov/tuigo/ansi"
+	"github.com/NLipatov/tuigo/internal/ansi"
 	"github.com/NLipatov/tuigo/keyboard"
 )
 

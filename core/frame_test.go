@@ -4,7 +4,7 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/NLipatov/tuigo/ansi"
+	"github.com/NLipatov/tuigo/color"
 )
 
 func TestNewFrameExposesDimensionsAndCells(t *testing.T) {
@@ -186,18 +186,18 @@ func TestNewFrameRejectsInvalidCellLayout(t *testing.T) {
 
 func TestFrameCellAtReadsCellsByRowMajorIndex(t *testing.T) {
 	cells := []Cell{
-		testCell(t, ansi.FG_BLACK),
-		testCell(t, ansi.FG_RED),
-		testCell(t, ansi.FG_GREEN),
-		testCell(t, ansi.FG_YELLOW),
-		testCell(t, ansi.FG_BLUE),
-		testCell(t, ansi.FG_PURPLE),
-		testCell(t, ansi.FG_CYAN),
-		testCell(t, ansi.FG_WHITE),
-		testCell(t, ansi.FG_BOLD_BLACK),
-		testCell(t, ansi.FG_BOLD_RED),
-		testCell(t, ansi.FG_BOLD_GREEN),
-		testCell(t, ansi.FG_BOLD_YELLOW),
+		testCell(t, color.FgBlack),
+		testCell(t, color.FgRed),
+		testCell(t, color.FgGreen),
+		testCell(t, color.FgYellow),
+		testCell(t, color.FgBlue),
+		testCell(t, color.FgPurple),
+		testCell(t, color.FgCyan),
+		testCell(t, color.FgWhite),
+		testCell(t, color.FgBoldBlack),
+		testCell(t, color.FgBoldRed),
+		testCell(t, color.FgBoldGreen),
+		testCell(t, color.FgBoldYellow),
 	}
 
 	tests := []struct {
@@ -301,12 +301,12 @@ func TestFrameCellAtRejectsOutOfBoundsCoordinates(t *testing.T) {
 
 func TestFrameRowAtReadsCellsByRowMajorIndex(t *testing.T) {
 	cells := []Cell{
-		testCell(t, ansi.FG_BLACK),
-		testCell(t, ansi.FG_RED),
-		testCell(t, ansi.FG_GREEN),
-		testCell(t, ansi.FG_YELLOW),
-		testCell(t, ansi.FG_BLUE),
-		testCell(t, ansi.FG_PURPLE),
+		testCell(t, color.FgBlack),
+		testCell(t, color.FgRed),
+		testCell(t, color.FgGreen),
+		testCell(t, color.FgYellow),
+		testCell(t, color.FgBlue),
+		testCell(t, color.FgPurple),
 	}
 
 	frame := Frame{
@@ -383,10 +383,10 @@ func TestFrameCellAtDoesNotAllocate(t *testing.T) {
 		width:  2,
 		height: 2,
 		cells: []Cell{
-			testCell(t, ansi.FG_BLACK),
-			testCell(t, ansi.FG_RED),
-			testCell(t, ansi.FG_GREEN),
-			testCell(t, ansi.FG_BLUE),
+			testCell(t, color.FgBlack),
+			testCell(t, color.FgRed),
+			testCell(t, color.FgGreen),
+			testCell(t, color.FgBlue),
 		},
 	}
 
@@ -407,10 +407,10 @@ func TestFrameRowAtDoesNotAllocate(t *testing.T) {
 		width:  2,
 		height: 2,
 		cells: []Cell{
-			testCell(t, ansi.FG_BLACK),
-			testCell(t, ansi.FG_RED),
-			testCell(t, ansi.FG_GREEN),
-			testCell(t, ansi.FG_BLUE),
+			testCell(t, color.FgBlack),
+			testCell(t, color.FgRed),
+			testCell(t, color.FgGreen),
+			testCell(t, color.FgBlue),
 		},
 	}
 
@@ -437,19 +437,10 @@ func newBlankFrame(t *testing.T, width, height int) (Frame, error) {
 	return NewFrame(width, height, cells)
 }
 
-func testCell(t *testing.T, sequence ansi.ANSIEscapeSequence) Cell {
+func testCell(t *testing.T, fg color.Color) Cell {
 	t.Helper()
 
-	fg, err := ansi.NewColor(sequence)
-	if err != nil {
-		t.Fatalf("NewColor(%q) error = %v", sequence, err)
-	}
-	bg, err := ansi.NewColor(ansi.BG_BLACK)
-	if err != nil {
-		t.Fatalf("NewColor(%q) error = %v", ansi.BG_BLACK, err)
-	}
-
-	cell, err := NewCell("x", fg, bg)
+	cell, err := NewCell("x", fg, color.BgBlack)
 	if err != nil {
 		t.Fatalf("NewCell(%q) error = %v", "x", err)
 	}
@@ -459,16 +450,7 @@ func testCell(t *testing.T, sequence ansi.ANSIEscapeSequence) Cell {
 func testCellWithGlyph(t *testing.T, symbol rune) Cell {
 	t.Helper()
 
-	fg, err := ansi.NewColor(ansi.FG_RED)
-	if err != nil {
-		t.Fatalf("NewColor(%q) error = %v", ansi.FG_RED, err)
-	}
-	bg, err := ansi.NewColor(ansi.BG_BLACK)
-	if err != nil {
-		t.Fatalf("NewColor(%q) error = %v", ansi.BG_BLACK, err)
-	}
-
-	cell, err := NewCell(string(symbol), fg, bg)
+	cell, err := NewCell(string(symbol), color.FgRed, color.BgBlack)
 	if err != nil {
 		t.Fatalf("NewCell(%q) error = %v", string(symbol), err)
 	}

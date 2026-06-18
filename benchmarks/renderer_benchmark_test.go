@@ -7,7 +7,7 @@ import (
 	"testing"
 
 	vaxis "git.sr.ht/~rockorager/vaxis"
-	"github.com/NLipatov/tuigo/ansi"
+	"github.com/NLipatov/tuigo/color"
 	"github.com/NLipatov/tuigo/core"
 	"github.com/NLipatov/tuigo/terminal/render"
 	"github.com/gdamore/tcell/v2"
@@ -350,19 +350,11 @@ func tuigoFrame(b *testing.B, width, height int, cells []core.Cell) core.Frame {
 func tuigoCell(b *testing.B, symbol rune, changedStyle bool) core.Cell {
 	b.Helper()
 
-	fgSequence := ansi.FG_RED
+	fg := color.FgRed
 	if changedStyle {
-		fgSequence = ansi.FG_GREEN
+		fg = color.FgGreen
 	}
-	fg, err := ansi.NewColor(fgSequence)
-	if err != nil {
-		b.Fatalf("ansi.NewColor(%q) error = %v", fgSequence, err)
-	}
-	bg, err := ansi.NewColor(ansi.BG_BLACK)
-	if err != nil {
-		b.Fatalf("ansi.NewColor(%q) error = %v", ansi.BG_BLACK, err)
-	}
-	cell, err := core.NewCell(string(symbol), fg, bg)
+	cell, err := core.NewCell(string(symbol), fg, color.BgBlack)
 	if err != nil {
 		b.Fatalf("core.NewCell(%q) error = %v", string(symbol), err)
 	}

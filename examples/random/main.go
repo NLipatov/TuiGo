@@ -8,7 +8,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/NLipatov/tuigo/ansi"
+	"github.com/NLipatov/tuigo/color"
 	"github.com/NLipatov/tuigo/core"
 	"github.com/NLipatov/tuigo/keyboard"
 	"github.com/NLipatov/tuigo/terminal"
@@ -19,22 +19,22 @@ const (
 	asciiMax = 125
 )
 
-var fgEscapeSequences = []ansi.ANSIEscapeSequence{
-	ansi.FG_RED,
-	ansi.FG_GREEN,
-	ansi.FG_YELLOW,
-	ansi.FG_BLUE,
-	ansi.FG_PURPLE,
-	ansi.FG_CYAN,
-	ansi.FG_WHITE,
-	ansi.FG_BOLD_BLACK,
-	ansi.FG_BOLD_RED,
-	ansi.FG_BOLD_GREEN,
-	ansi.FG_BOLD_YELLOW,
-	ansi.FG_BOLD_BLUE,
-	ansi.FG_BOLD_PURPLE,
-	ansi.FG_BOLD_CYAN,
-	ansi.FG_BOLD_WHITE,
+var fgPalette = []color.Color{
+	color.FgRed,
+	color.FgGreen,
+	color.FgYellow,
+	color.FgBlue,
+	color.FgPurple,
+	color.FgCyan,
+	color.FgWhite,
+	color.FgBoldBlack,
+	color.FgBoldRed,
+	color.FgBoldGreen,
+	color.FgBoldYellow,
+	color.FgBoldBlue,
+	color.FgBoldPurple,
+	color.FgBoldCyan,
+	color.FgBoldWhite,
 }
 
 type demo struct {
@@ -117,15 +117,7 @@ func newDemo(session terminal.Session) (*demo, error) {
 		return nil, err
 	}
 
-	fg, err := ansi.NewColor(ansi.FG_WHITE)
-	if err != nil {
-		return nil, err
-	}
-	bg, err := ansi.NewColor(ansi.BG_BLACK)
-	if err != nil {
-		return nil, err
-	}
-	blank, err := core.NewCellWithWidth(" ", 1, fg, bg)
+	blank, err := core.NewCellWithWidth(" ", 1, color.FgWhite, color.BgBlack)
 	if err != nil {
 		return nil, err
 	}
@@ -133,19 +125,11 @@ func newDemo(session terminal.Session) (*demo, error) {
 	if err != nil {
 		return nil, err
 	}
-	variants, err := newCellVariants(bg)
+	variants, err := newCellVariants(color.BgBlack)
 	if err != nil {
 		return nil, err
 	}
-	headerFG, err := ansi.NewColor(ansi.FG_GREEN)
-	if err != nil {
-		return nil, err
-	}
-	headerBG, err := ansi.NewColor(ansi.BG_HIGH_INTENSITY_YELLOW)
-	if err != nil {
-		return nil, err
-	}
-	headerGlyphs, err := newHeaderGlyphs(headerFG, headerBG)
+	headerGlyphs, err := newHeaderGlyphs(color.FgGreen, color.BgHighIntensityYellow)
 	if err != nil {
 		return nil, err
 	}
@@ -198,12 +182,7 @@ func newCells(size int, blank core.Cell) []core.Cell {
 	return cells
 }
 
-func newCellVariants(bg ansi.Color) ([]core.Cell, error) {
-	fgPalette, err := newFGPalette()
-	if err != nil {
-		return nil, err
-	}
-
+func newCellVariants(bg color.Color) ([]core.Cell, error) {
 	variants := make([]core.Cell, 0, len(fgPalette)*(asciiMax-asciiMin+1))
 	for _, fg := range fgPalette {
 		for r := asciiMin; r <= asciiMax; r++ {
@@ -217,19 +196,7 @@ func newCellVariants(bg ansi.Color) ([]core.Cell, error) {
 	return variants, nil
 }
 
-func newFGPalette() ([]ansi.Color, error) {
-	palette := make([]ansi.Color, 0, len(fgEscapeSequences))
-	for _, sequence := range fgEscapeSequences {
-		fg, err := ansi.NewColor(sequence)
-		if err != nil {
-			return nil, err
-		}
-		palette = append(palette, fg)
-	}
-	return palette, nil
-}
-
-func newHeaderGlyphs(fg, bg ansi.Color) ([128]core.Cell, error) {
+func newHeaderGlyphs(fg, bg color.Color) ([128]core.Cell, error) {
 	var glyphs [128]core.Cell
 	for ch := byte(32); ch <= 126; ch++ {
 		cell, err := core.NewCellWithWidth(string(rune(ch)), 1, fg, bg)

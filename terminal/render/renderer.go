@@ -4,14 +4,15 @@ import (
 	"io"
 	"strconv"
 
-	"github.com/NLipatov/tuigo/ansi"
+	"github.com/NLipatov/tuigo/color"
 	"github.com/NLipatov/tuigo/core"
+	"github.com/NLipatov/tuigo/internal/ansi"
 )
 
 const estimatedCellBytes = 36
 
 type renderStyle struct {
-	fg, bg ansi.Color
+	fg, bg color.Color
 	set    bool
 }
 

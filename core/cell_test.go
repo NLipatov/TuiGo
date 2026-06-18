@@ -4,7 +4,7 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/NLipatov/tuigo/ansi"
+	"github.com/NLipatov/tuigo/color"
 )
 
 func TestNewCellAcceptsSingleGraphemeCluster(t *testing.T) {
@@ -154,16 +154,8 @@ func TestNewCellWithWidthRejectsInvalidInput(t *testing.T) {
 	}
 }
 
-func testColors(t *testing.T) (ansi.Color, ansi.Color) {
+func testColors(t *testing.T) (color.Color, color.Color) {
 	t.Helper()
 
-	fg, err := ansi.NewColor(ansi.FG_RED)
-	if err != nil {
-		t.Fatalf("NewColor(%q) error = %v", ansi.FG_RED, err)
-	}
-	bg, err := ansi.NewColor(ansi.BG_BLACK)
-	if err != nil {
-		t.Fatalf("NewColor(%q) error = %v", ansi.BG_BLACK, err)
-	}
-	return fg, bg
+	return color.FgRed, color.BgBlack
 }
