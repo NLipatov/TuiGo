@@ -14,6 +14,10 @@ func fullRepaintPrefix() string {
 	return string(ansi.CLEAR_SCREEN) + string(ansi.CURSOR_HOME)
 }
 
+func colorString(c color.Color) string {
+	return string(colorEscape(c))
+}
+
 func testCell(t testing.TB, glyph string, fg, bg color.Color) core.Cell {
 	t.Helper()
 
@@ -39,7 +43,7 @@ func TestRendererRenderWritesCell(t *testing.T) {
 		t.Fatalf("Render() error = %v", err)
 	}
 
-	want := fullRepaintPrefix() + "\x1b[1;1H" + color.FgRed.String() + color.BgBlack.String() + "x"
+	want := fullRepaintPrefix() + "\x1b[1;1H" + colorString(color.FgRed) + colorString(color.BgBlack) + "x"
 	if got := out.String(); got != want {
 		t.Fatalf("rendered output = %q, want %q", got, want)
 	}
@@ -97,7 +101,7 @@ func TestRendererRenderWritesOnlyChangedCell(t *testing.T) {
 		t.Fatalf("Render() error = %v", err)
 	}
 
-	want := "\x1b[1;2H" + color.FgRed.String() + color.BgBlack.String() + "z"
+	want := "\x1b[1;2H" + colorString(color.FgRed) + colorString(color.BgBlack) + "z"
 	if got := out.String(); got != want {
 		t.Fatalf("rendered output = %q, want %q", got, want)
 	}
@@ -126,7 +130,7 @@ func TestRendererRenderWritesCellWhenOnlyStyleChanges(t *testing.T) {
 		t.Fatalf("Render() error = %v", err)
 	}
 
-	want := "\x1b[1;1H" + color.FgGreen.String() + color.BgBlack.String() + "x"
+	want := "\x1b[1;1H" + colorString(color.FgGreen) + colorString(color.BgBlack) + "x"
 	if got := out.String(); got != want {
 		t.Fatalf("rendered output = %q, want %q", got, want)
 	}
@@ -148,7 +152,7 @@ func TestRendererRenderReappliesBackgroundAfterForegroundReset(t *testing.T) {
 		t.Fatalf("Render() error = %v", err)
 	}
 
-	want := fullRepaintPrefix() + "\x1b[1;1H" + color.FgBoldWhite.String() + color.BgBlack.String() + "t" + color.FgWhite.String() + color.BgBlack.String() + " "
+	want := fullRepaintPrefix() + "\x1b[1;1H" + colorString(color.FgBoldWhite) + colorString(color.BgBlack) + "t" + colorString(color.FgWhite) + colorString(color.BgBlack) + " "
 	if got := out.String(); got != want {
 		t.Fatalf("rendered output = %q, want %q", got, want)
 	}
@@ -173,7 +177,7 @@ func TestRendererRenderSkipsContinuationCell(t *testing.T) {
 		t.Fatalf("Render() error = %v", err)
 	}
 
-	want := fullRepaintPrefix() + "\x1b[1;1H" + color.FgRed.String() + color.BgBlack.String() + "A🙂B"
+	want := fullRepaintPrefix() + "\x1b[1;1H" + colorString(color.FgRed) + colorString(color.BgBlack) + "A🙂B"
 	if got := out.String(); got != want {
 		t.Fatalf("rendered output = %q, want %q", got, want)
 	}
@@ -212,7 +216,7 @@ func TestRendererRenderSkipsContinuationInChangedRun(t *testing.T) {
 		t.Fatalf("Render() error = %v", err)
 	}
 
-	want := "\x1b[1;2H" + color.FgRed.String() + color.BgBlack.String() + "🙂"
+	want := "\x1b[1;2H" + colorString(color.FgRed) + colorString(color.BgBlack) + "🙂"
 	if got := out.String(); got != want {
 		t.Fatalf("rendered output = %q, want %q", got, want)
 	}
@@ -254,7 +258,7 @@ func TestRendererRenderWritesAdjacentChangedCellsAsSingleRun(t *testing.T) {
 		t.Fatalf("Render() error = %v", err)
 	}
 
-	want := "\x1b[1;2H" + color.FgRed.String() + color.BgBlack.String() + "xy"
+	want := "\x1b[1;2H" + colorString(color.FgRed) + colorString(color.BgBlack) + "xy"
 	if got := out.String(); got != want {
 		t.Fatalf("rendered output = %q, want %q", got, want)
 	}
@@ -296,7 +300,7 @@ func TestRendererRenderWritesSeparatedChangedCellsAsSeparateRuns(t *testing.T) {
 		t.Fatalf("Render() error = %v", err)
 	}
 
-	want := "\x1b[1;2H" + color.FgRed.String() + color.BgBlack.String() + "x" + "\x1b[1;4H" + "y"
+	want := "\x1b[1;2H" + colorString(color.FgRed) + colorString(color.BgBlack) + "x" + "\x1b[1;4H" + "y"
 	if got := out.String(); got != want {
 		t.Fatalf("rendered output = %q, want %q", got, want)
 	}
@@ -328,7 +332,7 @@ func TestRendererRenderWritesFullFrameAfterResize(t *testing.T) {
 		t.Fatalf("Render() error = %v", err)
 	}
 
-	want := fullRepaintPrefix() + "\x1b[1;1H" + color.FgRed.String() + color.BgBlack.String() + "yz"
+	want := fullRepaintPrefix() + "\x1b[1;1H" + colorString(color.FgRed) + colorString(color.BgBlack) + "yz"
 	if got := out.String(); got != want {
 		t.Fatalf("rendered output = %q, want %q", got, want)
 	}
@@ -354,7 +358,7 @@ func TestRendererRenderRetriesFullFrameAfterWriteError(t *testing.T) {
 		t.Fatalf("Render() error = %v", err)
 	}
 
-	want := fullRepaintPrefix() + "\x1b[1;1H" + color.FgRed.String() + color.BgBlack.String() + "x"
+	want := fullRepaintPrefix() + "\x1b[1;1H" + colorString(color.FgRed) + colorString(color.BgBlack) + "x"
 	if got := writer.out.String(); got != want {
 		t.Fatalf("rendered output = %q, want %q", got, want)
 	}
