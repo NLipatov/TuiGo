@@ -1,6 +1,6 @@
 # tuigo
 
-Everything else is slow as hell.
+Blazing fast TUI renderer and event loop for Go.
 
 ## Benchmarks
 
