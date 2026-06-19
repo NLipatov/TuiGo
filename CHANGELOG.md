@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.3.0](https://github.com/NLipatov/TuiGo/compare/v0.2.0...v0.3.0) (2026-06-19)
+
+
+### ⚠ BREAKING CHANGES
+
+* **core:** remove Frame.CellAt ([#15](https://github.com/NLipatov/TuiGo/issues/15))
+
+### Code Refactoring
+
+* **core:** remove Frame.CellAt ([#15](https://github.com/NLipatov/TuiGo/issues/15)) ([2556489](https://github.com/NLipatov/TuiGo/commit/2556489fbd1d8bba7a2c614cbdbfe909e26f00dd))
+
 ## [0.2.0](https://github.com/NLipatov/TuiGo/compare/v0.1.3...v0.2.0) (2026-06-18)
 
 
