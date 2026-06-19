@@ -1,6 +1,6 @@
 # tuigo
 
-Blazing fast, zero-allocation TUI renderer for Go.
+Everything else is slow as hell.
 
 ## Benchmarks
 
@@ -29,7 +29,7 @@ go run golang.org/x/perf/cmd/benchstat@v0.0.0-20260610192853-712aea8b4705 result
 - zero allocations with reused frame buffers
 - keyboard, mouse, resize events
 - ANSI diff output
-- one runtime dependency: `golang.org/x/term`
+- minimal dependencies: `golang.org/x/term` and `github.com/rivo/uniseg`
 
 ## Demo
 
@@ -54,17 +54,3 @@ go get github.com/NLipatov/tuigo@latest
 ```
 
 Pre-v1.0: public APIs may change between minor releases.
-
-## Performance Note
-
-Reuse two preallocated cell buffers: current and next. Draw into next, render
-it, then swap.
-
-```go
-current := make([]core.Cell, width*height)
-next := make([]core.Cell, width*height)
-
-// draw next
-// render next
-current, next = next, current
-```
