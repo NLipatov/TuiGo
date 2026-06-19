@@ -44,11 +44,12 @@ func NewFrame(width, height int, cells []Cell) (Frame, error) {
 
 func (frame Frame) validateCellLayout() error {
 	for y := range frame.height {
+		row, err := frame.RowAt(y)
+		if err != nil {
+			return err
+		}
 		for x := 0; x < frame.width; x++ {
-			cell, err := frame.CellAt(x, y)
-			if err != nil {
-				return err
-			}
+			cell := row[x]
 			switch cell.Width() {
 			case 0:
 				return FrameCellLayoutError{
@@ -64,10 +65,7 @@ func (frame Frame) validateCellLayout() error {
 						Reason: "missing continuation block",
 					}
 				}
-				continuation, err := frame.CellAt(x+1, y)
-				if err != nil {
-					return err
-				}
+				continuation := row[x+1]
 				if continuation.Width() != 0 {
 					return FrameCellLayoutError{
 						X:      x,
@@ -98,27 +96,4 @@ func (f Frame) RowAt(y int) ([]Cell, error) {
 	start := f.width * y
 	end := start + f.width
 	return f.cells[start:end:end], nil
-}
-
-// CellAt returns a copy of the cell at x,y.
-func (f Frame) CellAt(x, y int) (Cell, error) {
-	idx, err := f.idx(x, y)
-	if err != nil {
-		return Cell{}, err
-	}
-	return f.cells[idx], nil
-}
-
-func (f Frame) idx(x, y int) (int, error) {
-	if x < 0 || y < 0 {
-		return 0, ErrOutOfFrameBounds
-	}
-	if x >= f.width || y >= f.height {
-		return 0, ErrOutOfFrameBounds
-	}
-	idx := f.width*y + x
-	if idx >= len(f.cells) {
-		return 0, ErrOutOfFrameBounds
-	}
-	return idx, nil
 }
