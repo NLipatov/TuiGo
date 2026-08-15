@@ -94,6 +94,8 @@ func (s *Session) Close() error {
 	return nil
 }
 
+// Render displays frame. The frame's backing cell buffer may be mutated after
+// Render returns.
 func (s *Session) Render(frame core.Frame) error {
 	return s.renderer.Render(frame)
 }

@@ -72,6 +72,32 @@ func TestRendererRenderWritesNothingWhenFrameIsUnchanged(t *testing.T) {
 	}
 }
 
+func TestRendererRenderDetectsMutationOfPreviouslyRenderedFrame(t *testing.T) {
+	fg, bg := color.FgRed, color.BgBlack
+	cells := []core.Cell{testCell(t, "x", fg, bg)}
+	frame, err := core.NewFrame(1, 1, cells)
+	if err != nil {
+		t.Fatalf("core.NewFrame() error = %v", err)
+	}
+
+	var out bytes.Buffer
+	renderer := NewRenderer(&out)
+	if err := renderer.Render(frame); err != nil {
+		t.Fatalf("Render() error = %v", err)
+	}
+
+	cells[0] = testCell(t, "y", fg, bg)
+	out.Reset()
+	if err := renderer.Render(frame); err != nil {
+		t.Fatalf("Render() error = %v", err)
+	}
+
+	want := "\x1b[1;1H" + colorString(fg) + colorString(bg) + "y"
+	if got := out.String(); got != want {
+		t.Fatalf("rendered output = %q, want %q", got, want)
+	}
+}
+
 func TestRendererRenderWritesOnlyChangedCell(t *testing.T) {
 	fg, bg := color.FgRed, color.BgBlack
 
@@ -408,24 +434,28 @@ func TestRendererRenderDoesNotAllocateWhenRenderingFullFrame(t *testing.T) {
 
 func TestRendererRenderDoesNotAllocateWhenRenderingChangedCell(t *testing.T) {
 	fg, bg := color.FgRed, color.BgBlack
-
-	firstFrame, err := core.NewFrame(1, 1, []core.Cell{testCell(t, "x", fg, bg)})
-	if err != nil {
-		t.Fatalf("core.NewFrame() error = %v", err)
-	}
-	nextFrame, err := core.NewFrame(1, 1, []core.Cell{testCell(t, "y", fg, bg)})
+	x := testCell(t, "x", fg, bg)
+	y := testCell(t, "y", fg, bg)
+	cells := []core.Cell{x}
+	frame, err := core.NewFrame(1, 1, cells)
 	if err != nil {
 		t.Fatalf("core.NewFrame() error = %v", err)
 	}
 
 	renderer := NewRenderer(discardWriter{})
-	if err := renderer.Render(firstFrame); err != nil {
+	if err := renderer.Render(frame); err != nil {
 		t.Fatalf("Render() error = %v", err)
 	}
 
+	changed := false
 	allocs := testing.AllocsPerRun(1000, func() {
-		_ = renderer.Render(nextFrame)
-		_ = renderer.Render(firstFrame)
+		changed = !changed
+		if changed {
+			cells[0] = y
+		} else {
+			cells[0] = x
+		}
+		_ = renderer.Render(frame)
 	})
 	if allocs != 0 {
 		t.Fatalf("allocations per changed-cell render = %.2f, want 0", allocs)

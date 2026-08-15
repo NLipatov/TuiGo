@@ -95,8 +95,8 @@ func runDemo(
 	events <-chan terminal.Event,
 	state demoState,
 ) error {
-	var buffers frameBuffers
-	if err := renderDemo(session, &state, &buffers); err != nil {
+	var buffer frameBuffer
+	if err := renderDemo(session, &state, &buffer); err != nil {
 		return err
 	}
 
@@ -109,7 +109,7 @@ func runDemo(
 			return nil
 		case <-ticker.C:
 			state.frame++
-			if err := renderDemo(session, &state, &buffers); err != nil {
+			if err := renderDemo(session, &state, &buffer); err != nil {
 				return err
 			}
 		case event, ok := <-events:
@@ -119,7 +119,7 @@ func runDemo(
 			if handleEvent(&state, cancel, event) {
 				return nil
 			}
-			if err := renderDemo(session, &state, &buffers); err != nil {
+			if err := renderDemo(session, &state, &buffer); err != nil {
 				return err
 			}
 		}
@@ -170,20 +170,15 @@ type demoState struct {
 	draws  []time.Duration
 }
 
-type frameBuffers struct {
-	buffers [2]frameBuffer
-	next    int
-	width   int
-	height  int
-}
-
 type frameBuffer struct {
-	frame core.Frame
-	cells []core.Cell
+	frame  core.Frame
+	cells  []core.Cell
+	width  int
+	height int
 }
 
-func (b *frameBuffers) ensure(width, height int) error {
-	if b.width == width && b.height == height && b.buffers[0].cells != nil {
+func (b *frameBuffer) ensure(width, height int) error {
+	if b.width == width && b.height == height && b.cells != nil {
 		return nil
 	}
 	if width <= 0 || height <= 0 {
@@ -192,46 +187,31 @@ func (b *frameBuffers) ensure(width, height int) error {
 
 	colors := newDemoPalette()
 	blank := mustCell(" ", colors.fg, colors.bg)
-	for idx := range b.buffers {
-		cells := make([]core.Cell, width*height)
-		for i := range cells {
-			cells[i] = blank
-		}
-		frame, err := core.NewFrame(width, height, cells)
-		if err != nil {
-			return err
-		}
-		b.buffers[idx] = frameBuffer{
-			frame: frame,
-			cells: cells,
-		}
+	cells := make([]core.Cell, width*height)
+	for i := range cells {
+		cells[i] = blank
 	}
-	b.next = 0
+	frame, err := core.NewFrame(width, height, cells)
+	if err != nil {
+		return err
+	}
+	b.frame = frame
+	b.cells = cells
 	b.width = width
 	b.height = height
 	return nil
 }
 
-func (b *frameBuffers) back() *frameBuffer {
-	return &b.buffers[b.next]
-}
-
-func (b *frameBuffers) swap() {
-	b.next = 1 - b.next
-}
-
-func renderDemo(session *terminal.Session, state *demoState, buffers *frameBuffers) error {
-	if err := buffers.ensure(state.width, state.height); err != nil {
+func renderDemo(session *terminal.Session, state *demoState, buffer *frameBuffer) error {
+	if err := buffer.ensure(state.width, state.height); err != nil {
 		return err
 	}
-	buffer := buffers.back()
 	drawDemoFrame(buffer.cells, *state)
 
 	start := time.Now()
 	if err := session.Render(buffer.frame); err != nil {
 		return err
 	}
-	buffers.swap()
 	appendDrawSample(state, time.Since(start))
 	return nil
 }
@@ -275,7 +255,7 @@ func drawPanels(cells []core.Cell, state demoState, left, top int, colors demoPa
 	drawMetrics(cells, state.width, state.height, left+2, top, 20, "frame", []metric{
 		{"size", sizeLabel(state.width, state.height)},
 		{"cells", intLabel(state.width * state.height)},
-		{"buffers", "2"},
+		{"app buffers", "1"},
 	}, colors)
 	drawMetrics(cells, state.width, state.height, left+26, top, 20, "render", []metric{
 		{"frame", intLabel(state.frame)},

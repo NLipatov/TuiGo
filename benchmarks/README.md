@@ -31,8 +31,8 @@ grid. They intentionally do not benchmark a full application framework loop.
 Treat them as a reproducible harness for investigation and regression tracking,
 not as README-ready marketing numbers by themselves.
 
-- `tuigo` uses two preallocated `core.Frame` buffers and renders through
-  `terminal/render.Renderer` into a discard writer.
+- `tuigo` reuses one preallocated `core.Frame`; the renderer owns its previous
+  frame snapshot and writes ANSI output to a discard writer.
 - `tcell` uses `SimulationScreen`, applies changed cells with `Put` for sparse
   changes and `PutStrStyled` for contiguous rows/runs, then flushes with `Show`.
 - `vaxis` uses `Window.SetCell` or `Window.Fill`, then flushes with `Render`

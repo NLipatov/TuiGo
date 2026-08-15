@@ -26,7 +26,7 @@ go run golang.org/x/perf/cmd/benchstat@v0.0.0-20260610192853-712aea8b4705 result
 ## Features
 
 - `Frame -> Render` model
-- zero allocations with reused frame buffers
+- zero allocations with a reused frame
 - keyboard, mouse, resize events
 - ANSI diff output
 - minimal dependencies: `golang.org/x/term` and `github.com/rivo/uniseg`

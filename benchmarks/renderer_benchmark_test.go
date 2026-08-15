@@ -112,16 +112,13 @@ func benchmarkWorkloads() []workload {
 func benchmarkTuigoRenderer(b *testing.B, workload workload) {
 	baseCell := tuigoCell(b, workload.baseSymbol, false)
 	changedCell := tuigoCell(b, workload.changedSymbol, workload.styleChange)
-	baseCells := make([]core.Cell, workload.width*workload.height)
-	changedCells := make([]core.Cell, workload.width*workload.height)
-	fillTuigoCells(baseCells, baseCell)
-	fillTuigoCells(changedCells, baseCell)
+	cells := make([]core.Cell, workload.width*workload.height)
+	fillTuigoCells(cells, baseCell)
 
-	baseFrame := tuigoFrame(b, workload.width, workload.height, baseCells)
-	changedFrame := tuigoFrame(b, workload.width, workload.height, changedCells)
+	frame := tuigoFrame(b, workload.width, workload.height, cells)
 	writer := countingWriter{}
 	renderer := render.NewRenderer(&writer)
-	if err := renderer.Render(baseFrame); err != nil {
+	if err := renderer.Render(frame); err != nil {
 		b.Fatalf("Render() error = %v", err)
 	}
 
@@ -132,15 +129,12 @@ func benchmarkTuigoRenderer(b *testing.B, workload workload) {
 	useChanged := false
 	for b.Loop() {
 		useChanged = !useChanged
+		cell := baseCell
 		if useChanged {
-			applyTuigoCells(changedCells, workload.positions, changedCell)
-			if err := renderer.Render(changedFrame); err != nil {
-				b.Fatalf("Render() error = %v", err)
-			}
-			continue
+			cell = changedCell
 		}
-		applyTuigoCells(baseCells, workload.positions, baseCell)
-		if err := renderer.Render(baseFrame); err != nil {
+		applyTuigoCells(cells, workload.positions, cell)
+		if err := renderer.Render(frame); err != nil {
 			b.Fatalf("Render() error = %v", err)
 		}
 	}
