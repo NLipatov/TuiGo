@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.3.1](https://github.com/NLipatov/TuiGo/compare/v0.3.0...v0.3.1) (2026-08-15)
+
+
+### Features
+
+* **render:** allow reusing a frame ([0e2fc47](https://github.com/NLipatov/TuiGo/commit/0e2fc4741fae87c86238e595492a5f3194011557))
+
 ## [0.3.0](https://github.com/NLipatov/TuiGo/compare/v0.2.0...v0.3.0) (2026-06-19)
 
 
