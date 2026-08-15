@@ -38,14 +38,13 @@ var fgPalette = []color.Color{
 }
 
 type demo struct {
-	idx           int
 	width         int
 	height        int
 	frameCount    int
 	fps           int
 	lastFPSUpdate time.Time
-	frames        [2]core.Frame
-	cells         [2][]core.Cell
+	frame         core.Frame
+	cells         []core.Cell
 	cellVariants  []core.Cell
 	headerGlyphs  [128]core.Cell
 	headerCells   []core.Cell
@@ -121,7 +120,7 @@ func newDemo(session terminal.Session) (*demo, error) {
 	if err != nil {
 		return nil, err
 	}
-	frames, cells, err := newFrames(width, height, blank)
+	frame, cells, err := newFrame(width, height, blank)
 	if err != nil {
 		return nil, err
 	}
@@ -137,7 +136,7 @@ func newDemo(session terminal.Session) (*demo, error) {
 	demo := &demo{
 		width:         width,
 		height:        height,
-		frames:        frames,
+		frame:         frame,
 		cells:         cells,
 		cellVariants:  variants,
 		headerGlyphs:  headerGlyphs,
@@ -145,24 +144,8 @@ func newDemo(session terminal.Session) (*demo, error) {
 		rng:           rand.New(rand.NewSource(time.Now().UnixNano())),
 	}
 	demo.updateHeader()
-	demo.drawHeader(0)
-	demo.drawHeader(1)
+	demo.drawHeader()
 	return demo, nil
-}
-
-func newFrames(width, height int, blank core.Cell) ([2]core.Frame, [2][]core.Cell, error) {
-	var frames [2]core.Frame
-	var cells [2][]core.Cell
-
-	for idx := range frames {
-		frame, frameCells, err := newFrame(width, height, blank)
-		if err != nil {
-			return [2]core.Frame{}, [2][]core.Cell{}, err
-		}
-		frames[idx] = frame
-		cells[idx] = frameCells
-	}
-	return frames, cells, nil
 }
 
 func newFrame(width, height int, blank core.Cell) (core.Frame, []core.Cell, error) {
@@ -209,29 +192,14 @@ func newHeaderGlyphs(fg, bg color.Color) ([128]core.Cell, error) {
 }
 
 func (d *demo) tick(session *terminal.Session) error {
-	cellIdx, hasCell := d.randomCellIndex()
-	var cell core.Cell
-	if hasCell {
-		cell = d.cellVariants[d.rng.Intn(len(d.cellVariants))]
-		d.cells[d.idx][cellIdx] = cell
+	if cellIdx, ok := d.randomCellIndex(); ok {
+		d.cells[cellIdx] = d.cellVariants[d.rng.Intn(len(d.cellVariants))]
 	}
 
-	headerUpdated := d.updateFPS()
-	if headerUpdated {
-		d.drawHeader(d.idx)
+	if d.updateFPS() {
+		d.drawHeader()
 	}
-	if err := session.Render(d.frames[d.idx]); err != nil {
-		return err
-	}
-
-	d.idx ^= 1
-	if hasCell {
-		d.cells[d.idx][cellIdx] = cell
-	}
-	if headerUpdated {
-		d.drawHeader(d.idx)
-	}
-	return nil
+	return session.Render(d.frame)
 }
 
 func (d *demo) randomCellIndex() (int, bool) {
@@ -267,12 +235,12 @@ func (d *demo) updateHeader() {
 	}
 }
 
-func (d *demo) drawHeader(frameIdx int) {
+func (d *demo) drawHeader() {
 	header := d.headerCells
 	if len(header) > d.width {
 		header = header[:d.width]
 	}
-	copy(d.cells[frameIdx], header)
+	copy(d.cells, header)
 }
 
 func fpsLabel(fps int) string {

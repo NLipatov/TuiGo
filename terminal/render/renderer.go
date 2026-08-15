@@ -17,11 +17,11 @@ type renderStyle struct {
 }
 
 type Renderer struct {
-	frame, oldFrame core.Frame
-	fullRepaint     bool
-	writer          io.Writer
-	out             []byte
-	style           renderStyle
+	previous    core.Frame
+	fullRepaint bool
+	writer      io.Writer
+	out         []byte
+	style       renderStyle
 }
 
 func NewRenderer(writer io.Writer) *Renderer {
@@ -31,32 +31,21 @@ func NewRenderer(writer io.Writer) *Renderer {
 	}
 }
 
+// Render writes the changes in frame. The frame's backing cell buffer is not
+// retained and may be mutated after Render returns.
 func (r *Renderer) Render(frame core.Frame) error {
-	r.advanceFrame(frame)
-	return r.renderFrame()
-}
-
-func (r *Renderer) advanceFrame(frame core.Frame) {
-	if frame.Width() != r.frame.Width() ||
-		frame.Height() != r.frame.Height() {
-		r.frame = frame
-		r.fullRepaint = true
-		return
+	if err := r.ensurePreviousFrame(frame); err != nil {
+		return err
 	}
-	r.oldFrame = r.frame
-	r.frame = frame
-}
-
-func (r *Renderer) renderFrame() error {
-	r.ensureOutCapacity()
+	r.ensureOutCapacity(frame)
 	r.style.set = false
 	r.out = r.out[:0]
 	if r.fullRepaint {
-		if err := r.renderFullFrame(); err != nil {
+		if err := r.renderFullFrame(frame); err != nil {
 			return err
 		}
 	} else {
-		if err := r.renderDiffFrame(); err != nil {
+		if err := r.renderDiffFrame(frame); err != nil {
 			return err
 		}
 	}
@@ -65,51 +54,79 @@ func (r *Renderer) renderFrame() error {
 		return err
 	}
 	r.fullRepaint = false
-	r.oldFrame = r.frame
 	return nil
 }
 
-func (r *Renderer) ensureOutCapacity() {
-	need := r.frame.Height() * r.frame.Width() * estimatedCellBytes
+func (r *Renderer) ensurePreviousFrame(frame core.Frame) error {
+	if frame.Width() == r.previous.Width() && frame.Height() == r.previous.Height() {
+		return nil
+	}
+
+	cells := make([]core.Cell, frame.Width()*frame.Height())
+	for y := range frame.Height() {
+		row, err := frame.RowAt(y)
+		if err != nil {
+			return err
+		}
+		start := y * frame.Width()
+		copy(cells[start:start+frame.Width()], row)
+	}
+	previous, err := core.NewFrame(frame.Width(), frame.Height(), cells)
+	if err != nil {
+		return err
+	}
+	r.previous = previous
+	r.fullRepaint = true
+	return nil
+}
+
+func (r *Renderer) ensureOutCapacity(frame core.Frame) {
+	need := frame.Height() * frame.Width() * estimatedCellBytes
 	if cap(r.out) < need {
 		r.out = make([]byte, 0, need)
 	}
 }
 
-func (r *Renderer) renderFullFrame() error {
+func (r *Renderer) renderFullFrame(frame core.Frame) error {
 	r.out = append(r.out, ansi.CLEAR_SCREEN...)
 	r.out = append(r.out, ansi.CURSOR_HOME...)
 
-	for y := range r.frame.Height() {
-		cells, err := r.frame.RowAt(y)
+	for y := range frame.Height() {
+		row, err := frame.RowAt(y)
 		if err != nil {
 			return err
 		}
-		r.renderRow(0, y, cells)
+		previousRow, err := r.previous.RowAt(y)
+		if err != nil {
+			return err
+		}
+		r.renderRow(0, y, row)
+		copy(previousRow, row)
 	}
 	return nil
 }
 
-func (r *Renderer) renderDiffFrame() error {
-	for y := range r.frame.Height() {
-		row, err := r.frame.RowAt(y)
+func (r *Renderer) renderDiffFrame(frame core.Frame) error {
+	for y := range frame.Height() {
+		row, err := frame.RowAt(y)
 		if err != nil {
 			return err
 		}
-		oldRow, err := r.oldFrame.RowAt(y)
+		previousRow, err := r.previous.RowAt(y)
 		if err != nil {
 			return err
 		}
 		for x := 0; x < len(row); {
-			if row[x] == oldRow[x] {
+			if row[x] == previousRow[x] {
 				x++
 				continue
 			}
 			start := x
-			for x < len(row) && row[x] != oldRow[x] {
+			for x < len(row) && row[x] != previousRow[x] {
 				x++
 			}
 			r.renderRow(start, y, row[start:x])
+			copy(previousRow[start:x], row[start:x])
 		}
 	}
 	return nil
