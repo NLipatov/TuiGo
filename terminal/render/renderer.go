@@ -9,8 +9,6 @@ import (
 	"github.com/NLipatov/tuigo/internal/ansi"
 )
 
-const estimatedCellBytes = 36
-
 type renderStyle struct {
 	fg, bg color.Color
 	set    bool
@@ -37,7 +35,6 @@ func (r *Renderer) Render(frame core.Frame) error {
 	if err := r.ensurePreviousFrame(frame); err != nil {
 		return err
 	}
-	r.ensureOutCapacity(frame)
 	r.style.set = false
 	r.out = r.out[:0]
 	if r.fullRepaint {
@@ -78,13 +75,6 @@ func (r *Renderer) ensurePreviousFrame(frame core.Frame) error {
 	r.previous = previous
 	r.fullRepaint = true
 	return nil
-}
-
-func (r *Renderer) ensureOutCapacity(frame core.Frame) {
-	need := frame.Height() * frame.Width() * estimatedCellBytes
-	if cap(r.out) < need {
-		r.out = make([]byte, 0, need)
-	}
 }
 
 func (r *Renderer) renderFullFrame(frame core.Frame) error {
