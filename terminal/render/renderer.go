@@ -15,7 +15,7 @@ type renderStyle struct {
 }
 
 type Renderer struct {
-	previous    core.Frame
+	frame       core.Frame
 	fullRepaint bool
 	writer      io.Writer
 	out         []byte
@@ -55,7 +55,7 @@ func (r *Renderer) Render(frame core.Frame) error {
 }
 
 func (r *Renderer) ensurePreviousFrame(frame core.Frame) error {
-	if frame.Width() == r.previous.Width() && frame.Height() == r.previous.Height() {
+	if frame.Width() == r.frame.Width() && frame.Height() == r.frame.Height() {
 		return nil
 	}
 
@@ -72,7 +72,7 @@ func (r *Renderer) ensurePreviousFrame(frame core.Frame) error {
 	if err != nil {
 		return err
 	}
-	r.previous = previous
+	r.frame = previous
 	r.fullRepaint = true
 	return nil
 }
@@ -86,7 +86,7 @@ func (r *Renderer) renderFullFrame(frame core.Frame) error {
 		if err != nil {
 			return err
 		}
-		previousRow, err := r.previous.RowAt(y)
+		previousRow, err := r.frame.RowAt(y)
 		if err != nil {
 			return err
 		}
@@ -102,7 +102,7 @@ func (r *Renderer) renderDiffFrame(frame core.Frame) error {
 		if err != nil {
 			return err
 		}
-		previousRow, err := r.previous.RowAt(y)
+		previousRow, err := r.frame.RowAt(y)
 		if err != nil {
 			return err
 		}
