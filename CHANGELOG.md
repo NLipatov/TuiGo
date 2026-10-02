@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.4.0](https://github.com/NLipatov/TuiGo/compare/v0.3.1...v0.4.0) (2026-10-02)
+
+
+### ⚠ BREAKING CHANGES
+
+* rename core package to canvas ([#21](https://github.com/NLipatov/TuiGo/issues/21))
+
+### Code Refactoring
+
+* rename core package to canvas ([#21](https://github.com/NLipatov/TuiGo/issues/21)) ([86d620d](https://github.com/NLipatov/TuiGo/commit/86d620d8fbef04d7afe69142af536d8a3487d558))
+
 ## [0.3.1](https://github.com/NLipatov/TuiGo/compare/v0.3.0...v0.3.1) (2026-08-15)
 
 
