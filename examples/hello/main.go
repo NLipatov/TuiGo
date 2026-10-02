@@ -4,8 +4,8 @@ import (
 	"context"
 	"os"
 
+	"github.com/NLipatov/tuigo/canvas"
 	"github.com/NLipatov/tuigo/color"
-	"github.com/NLipatov/tuigo/core"
 	"github.com/NLipatov/tuigo/keyboard"
 	"github.com/NLipatov/tuigo/terminal"
 	"github.com/rivo/uniseg"
@@ -90,9 +90,9 @@ var helloLogo = []string{
 
 const helloTitle = "tuigo"
 
-func helloFrame(width, height int) (core.Frame, error) {
+func helloFrame(width, height int) (canvas.Frame, error) {
 	colors := newPalette()
-	cells := make([]core.Cell, width*height)
+	cells := make([]canvas.Cell, width*height)
 	for i := range cells {
 		cells[i] = colors.blank
 	}
@@ -104,13 +104,13 @@ func helloFrame(width, height int) (core.Frame, error) {
 	drawText(cells, width, height, centeredX(width, helloTitle), logoY+logoHeight()+2, helloTitle, colors.title, colors.bg)
 	drawText(cells, width, height, centeredX(width, "Press q, Esc, or Ctrl+C to quit"), height-2, "Press q, Esc, or Ctrl+C to quit", colors.hint, colors.bg)
 
-	return core.NewFrame(width, height, cells)
+	return canvas.NewFrame(width, height, cells)
 }
 
 type palette struct {
-	blank  core.Cell
-	logo   core.Cell
-	shadow core.Cell
+	blank  canvas.Cell
+	logo   canvas.Cell
+	shadow canvas.Cell
 	title  color.Color
 	hint   color.Color
 	bg     color.Color
@@ -128,7 +128,7 @@ func newPalette() palette {
 	}
 }
 
-func drawLogo(cells []core.Cell, width, height, left, top int, cell core.Cell) {
+func drawLogo(cells []canvas.Cell, width, height, left, top int, cell canvas.Cell) {
 	for y, row := range helloLogo {
 		for x, pixel := range row {
 			if pixel != ' ' {
@@ -138,7 +138,7 @@ func drawLogo(cells []core.Cell, width, height, left, top int, cell core.Cell) {
 	}
 }
 
-func drawText(cells []core.Cell, width, height, left, y int, text string, fg, bg color.Color) {
+func drawText(cells []canvas.Cell, width, height, left, y int, text string, fg, bg color.Color) {
 	x := left
 	for text != "" {
 		glyph, rest, _, _ := uniseg.FirstGraphemeClusterInString(text, -1)
@@ -148,14 +148,14 @@ func drawText(cells []core.Cell, width, height, left, y int, text string, fg, bg
 		}
 		putCell(cells, width, height, x, y, cell)
 		if cell.Width() == 2 {
-			putCell(cells, width, height, x+1, y, core.Cell{})
+			putCell(cells, width, height, x+1, y, canvas.Cell{})
 		}
 		x += cell.Width()
 		text = rest
 	}
 }
 
-func putCell(cells []core.Cell, width, height, x, y int, cell core.Cell) {
+func putCell(cells []canvas.Cell, width, height, x, y int, cell canvas.Cell) {
 	if x < 0 || y < 0 || x >= width || y >= height {
 		return
 	}
@@ -178,8 +178,8 @@ func logoHeight() int {
 	return len(helloLogo)
 }
 
-func mustCell(text string, fg, bg color.Color) core.Cell {
-	cell, err := core.NewCell(text, fg, bg)
+func mustCell(text string, fg, bg color.Color) canvas.Cell {
+	cell, err := canvas.NewCell(text, fg, bg)
 	if err != nil {
 		panic(err)
 	}

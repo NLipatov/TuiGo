@@ -8,8 +8,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/NLipatov/tuigo/canvas"
 	"github.com/NLipatov/tuigo/color"
-	"github.com/NLipatov/tuigo/core"
 	"github.com/NLipatov/tuigo/internal/ansi"
 	"github.com/NLipatov/tuigo/keyboard"
 	"github.com/NLipatov/tuigo/mouse"
@@ -36,13 +36,13 @@ func TestNewSessionWiresRendererToSessionOutput(t *testing.T) {
 		t.Fatalf("NewSession() error = %v", err)
 	}
 
-	cell, err := core.NewCell("x", color.FgRed, color.BgBlack)
+	cell, err := canvas.NewCell("x", color.FgRed, color.BgBlack)
 	if err != nil {
-		t.Fatalf("core.NewCell(%q) error = %v", "x", err)
+		t.Fatalf("canvas.NewCell(%q) error = %v", "x", err)
 	}
-	frame, err := core.NewFrame(1, 1, []core.Cell{cell})
+	frame, err := canvas.NewFrame(1, 1, []canvas.Cell{cell})
 	if err != nil {
-		t.Fatalf("core.NewFrame() error = %v", err)
+		t.Fatalf("canvas.NewFrame() error = %v", err)
 	}
 
 	if err := session.Render(frame); err != nil {

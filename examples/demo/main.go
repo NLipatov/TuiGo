@@ -8,8 +8,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/NLipatov/tuigo/canvas"
 	"github.com/NLipatov/tuigo/color"
-	"github.com/NLipatov/tuigo/core"
 	"github.com/NLipatov/tuigo/keyboard"
 	"github.com/NLipatov/tuigo/mouse"
 	"github.com/NLipatov/tuigo/terminal"
@@ -171,8 +171,8 @@ type demoState struct {
 }
 
 type frameBuffer struct {
-	frame  core.Frame
-	cells  []core.Cell
+	frame  canvas.Frame
+	cells  []canvas.Cell
 	width  int
 	height int
 }
@@ -182,16 +182,16 @@ func (b *frameBuffer) ensure(width, height int) error {
 		return nil
 	}
 	if width <= 0 || height <= 0 {
-		return core.ErrInvalidFrameDimensions
+		return canvas.ErrInvalidFrameDimensions
 	}
 
 	colors := newDemoPalette()
 	blank := mustCell(" ", colors.fg, colors.bg)
-	cells := make([]core.Cell, width*height)
+	cells := make([]canvas.Cell, width*height)
 	for i := range cells {
 		cells[i] = blank
 	}
-	frame, err := core.NewFrame(width, height, cells)
+	frame, err := canvas.NewFrame(width, height, cells)
 	if err != nil {
 		return err
 	}
@@ -216,7 +216,7 @@ func renderDemo(session *terminal.Session, state *demoState, buffer *frameBuffer
 	return nil
 }
 
-func drawDemoFrame(cells []core.Cell, state demoState) {
+func drawDemoFrame(cells []canvas.Cell, state demoState) {
 	colors := newDemoPalette()
 	for i := range cells {
 		cells[i] = mustCell(" ", colors.fg, colors.bg)
@@ -236,13 +236,13 @@ func drawDemoFrame(cells []core.Cell, state demoState) {
 	drawTextClipped(cells, state.width, state.height, left+2, top+boxHeight-2, boxWidth-4, "q/esc quit   r reset", colors.fg, colors.bg)
 }
 
-func drawCompact(cells []core.Cell, state demoState, colors demoPalette) {
+func drawCompact(cells []canvas.Cell, state demoState, colors demoPalette) {
 	drawText(cells, state.width, state.height, 1, 1, "tuigo", colors.accent, colors.bg)
 	drawText(cells, state.width, state.height, 1, 3, "resize terminal to at least 72x24", colors.fg, colors.bg)
 	drawText(cells, state.width, state.height, 1, 5, "q / esc / ctrl+c quit", colors.fg, colors.bg)
 }
 
-func drawHeader(cells []core.Cell, state demoState, left, top, width int, colors demoPalette) {
+func drawHeader(cells []canvas.Cell, state demoState, left, top, width int, colors demoPalette) {
 	title := "tuigo"
 	mode := sizeLabel(state.width, state.height)
 	drawText(cells, state.width, state.height, left+2, top+1, title, colors.accent, colors.bg)
@@ -250,7 +250,7 @@ func drawHeader(cells []core.Cell, state demoState, left, top, width int, colors
 	drawSeparator(cells, state.width, state.height, left, top+2, width, colors.fg, colors.bg)
 }
 
-func drawPanels(cells []core.Cell, state demoState, left, top int, colors demoPalette) {
+func drawPanels(cells []canvas.Cell, state demoState, left, top int, colors demoPalette) {
 	median := medianDrawDuration(state.draws)
 	drawMetrics(cells, state.width, state.height, left+2, top, 20, "frame", []metric{
 		{"size", sizeLabel(state.width, state.height)},
@@ -269,7 +269,7 @@ type metric struct {
 	value string
 }
 
-func drawMetrics(cells []core.Cell, width, height, left, top, columnWidth int, title string, rows []metric, colors demoPalette) {
+func drawMetrics(cells []canvas.Cell, width, height, left, top, columnWidth int, title string, rows []metric, colors demoPalette) {
 	drawTextClipped(cells, width, height, left, top, columnWidth, title, colors.accent, colors.bg)
 	valueLeft := left + 10
 	valueWidth := columnWidth - 10
@@ -280,7 +280,7 @@ func drawMetrics(cells []core.Cell, width, height, left, top, columnWidth int, t
 	}
 }
 
-func drawEventStream(cells []core.Cell, state demoState, left, top, streamWidth int, colors demoPalette) {
+func drawEventStream(cells []canvas.Cell, state demoState, left, top, streamWidth int, colors demoPalette) {
 	drawText(cells, state.width, state.height, left, top, "event stream", colors.accent, colors.bg)
 	drawTextClipped(cells, state.width, state.height, left, top+2, streamWidth, "events "+intLabel(state.events), colors.fg, colors.bg)
 	start := max(0, len(state.log)-4)
@@ -383,7 +383,7 @@ func demoBounds(width, height int) (int, int, int, int) {
 	return left, top, boxWidth, boxHeight
 }
 
-func drawBox(cells []core.Cell, width, height, left, top, boxWidth, boxHeight int, fg, bg color.Color) {
+func drawBox(cells []canvas.Cell, width, height, left, top, boxWidth, boxHeight int, fg, bg color.Color) {
 	if boxWidth < 2 || boxHeight < 2 {
 		return
 	}
@@ -403,7 +403,7 @@ func drawBox(cells []core.Cell, width, height, left, top, boxWidth, boxHeight in
 	}
 }
 
-func drawSeparator(cells []core.Cell, width, height, left, y, lineWidth int, fg, bg color.Color) {
+func drawSeparator(cells []canvas.Cell, width, height, left, y, lineWidth int, fg, bg color.Color) {
 	putCell(cells, width, height, left, y, mustCell("├", fg, bg))
 	putCell(cells, width, height, left+lineWidth-1, y, mustCell("┤", fg, bg))
 	for x := 1; x < lineWidth-1; x++ {
@@ -411,7 +411,7 @@ func drawSeparator(cells []core.Cell, width, height, left, y, lineWidth int, fg,
 	}
 }
 
-func drawText(cells []core.Cell, width, height, left, y int, text string, fg, bg color.Color) {
+func drawText(cells []canvas.Cell, width, height, left, y int, text string, fg, bg color.Color) {
 	x := left
 	for text != "" {
 		glyph, rest, _, _ := uniseg.FirstGraphemeClusterInString(text, -1)
@@ -421,18 +421,18 @@ func drawText(cells []core.Cell, width, height, left, y int, text string, fg, bg
 		}
 		putCell(cells, width, height, x, y, cell)
 		if cell.Width() == 2 {
-			putCell(cells, width, height, x+1, y, core.Cell{})
+			putCell(cells, width, height, x+1, y, canvas.Cell{})
 		}
 		x += cell.Width()
 		text = rest
 	}
 }
 
-func drawTextClipped(cells []core.Cell, width, height, left, y, maxWidth int, text string, fg, bg color.Color) {
+func drawTextClipped(cells []canvas.Cell, width, height, left, y, maxWidth int, text string, fg, bg color.Color) {
 	drawText(cells, width, height, left, y, trimLabel(text, maxWidth), fg, bg)
 }
 
-func putCell(cells []core.Cell, width, height, x, y int, cell core.Cell) {
+func putCell(cells []canvas.Cell, width, height, x, y int, cell canvas.Cell) {
 	if x < 0 || y < 0 || x >= width || y >= height {
 		return
 	}
@@ -593,8 +593,8 @@ func displayWidth(text string) int {
 	return width
 }
 
-func mustCell(text string, fg, bg color.Color) core.Cell {
-	cell, err := core.NewCell(text, fg, bg)
+func mustCell(text string, fg, bg color.Color) canvas.Cell {
+	cell, err := canvas.NewCell(text, fg, bg)
 	if err != nil {
 		panic(err)
 	}
