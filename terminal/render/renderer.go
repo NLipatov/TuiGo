@@ -4,8 +4,8 @@ import (
 	"io"
 	"strconv"
 
+	"github.com/NLipatov/tuigo/canvas"
 	"github.com/NLipatov/tuigo/color"
-	"github.com/NLipatov/tuigo/core"
 	"github.com/NLipatov/tuigo/internal/ansi"
 )
 
@@ -15,7 +15,7 @@ type renderStyle struct {
 }
 
 type Renderer struct {
-	frame       core.Frame
+	frame       canvas.Frame
 	fullRepaint bool
 	writer      io.Writer
 	out         []byte
@@ -31,7 +31,7 @@ func NewRenderer(writer io.Writer) *Renderer {
 
 // Render writes the changes in frame. The frame's backing cell buffer is not
 // retained and may be mutated after Render returns.
-func (r *Renderer) Render(frame core.Frame) error {
+func (r *Renderer) Render(frame canvas.Frame) error {
 	if err := r.ensurePreviousFrame(frame); err != nil {
 		return err
 	}
@@ -54,12 +54,12 @@ func (r *Renderer) Render(frame core.Frame) error {
 	return nil
 }
 
-func (r *Renderer) ensurePreviousFrame(frame core.Frame) error {
+func (r *Renderer) ensurePreviousFrame(frame canvas.Frame) error {
 	if frame.Width() == r.frame.Width() && frame.Height() == r.frame.Height() {
 		return nil
 	}
 
-	cells := make([]core.Cell, frame.Width()*frame.Height())
+	cells := make([]canvas.Cell, frame.Width()*frame.Height())
 	for y := range frame.Height() {
 		row, err := frame.RowAt(y)
 		if err != nil {
@@ -68,7 +68,7 @@ func (r *Renderer) ensurePreviousFrame(frame core.Frame) error {
 		start := y * frame.Width()
 		copy(cells[start:start+frame.Width()], row)
 	}
-	previous, err := core.NewFrame(frame.Width(), frame.Height(), cells)
+	previous, err := canvas.NewFrame(frame.Width(), frame.Height(), cells)
 	if err != nil {
 		return err
 	}
@@ -77,7 +77,7 @@ func (r *Renderer) ensurePreviousFrame(frame core.Frame) error {
 	return nil
 }
 
-func (r *Renderer) renderFullFrame(frame core.Frame) error {
+func (r *Renderer) renderFullFrame(frame canvas.Frame) error {
 	r.out = append(r.out, ansi.CLEAR_SCREEN...)
 	r.out = append(r.out, ansi.CURSOR_HOME...)
 
@@ -96,7 +96,7 @@ func (r *Renderer) renderFullFrame(frame core.Frame) error {
 	return nil
 }
 
-func (r *Renderer) renderDiffFrame(frame core.Frame) error {
+func (r *Renderer) renderDiffFrame(frame canvas.Frame) error {
 	for y := range frame.Height() {
 		row, err := frame.RowAt(y)
 		if err != nil {
@@ -122,7 +122,7 @@ func (r *Renderer) renderDiffFrame(frame core.Frame) error {
 	return nil
 }
 
-func (r *Renderer) renderRow(x, y int, cells []core.Cell) {
+func (r *Renderer) renderRow(x, y int, cells []canvas.Cell) {
 	r.cursorMove(x, y)
 	for _, cell := range cells {
 		if cell.Width() == 0 {
@@ -144,7 +144,7 @@ func (r *Renderer) cursorMove(x, y int) {
 	r.out = append(r.out, 'H')
 }
 
-func (r *Renderer) renderStyle(cell core.Cell) {
+func (r *Renderer) renderStyle(cell canvas.Cell) {
 	fgChanged := !r.style.set || r.style.fg != cell.Foreground()
 	if fgChanged {
 		r.out = append(r.out, colorEscape(cell.Foreground())...)

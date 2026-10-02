@@ -7,7 +7,7 @@ import (
 	"io"
 	"os"
 
-	"github.com/NLipatov/tuigo/core"
+	"github.com/NLipatov/tuigo/canvas"
 	"github.com/NLipatov/tuigo/internal/ansi"
 	"github.com/NLipatov/tuigo/terminal/internal/input"
 	"github.com/NLipatov/tuigo/terminal/render"
@@ -25,7 +25,7 @@ type eventListener interface {
 }
 
 type renderer interface {
-	Render(frame core.Frame) error
+	Render(frame canvas.Frame) error
 }
 
 type Session struct {
@@ -96,7 +96,7 @@ func (s *Session) Close() error {
 
 // Render displays frame. The frame's backing cell buffer may be mutated after
 // Render returns.
-func (s *Session) Render(frame core.Frame) error {
+func (s *Session) Render(frame canvas.Frame) error {
 	return s.renderer.Render(frame)
 }
 

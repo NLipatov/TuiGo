@@ -8,8 +8,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/NLipatov/tuigo/canvas"
 	"github.com/NLipatov/tuigo/color"
-	"github.com/NLipatov/tuigo/core"
 	"github.com/NLipatov/tuigo/keyboard"
 	"github.com/NLipatov/tuigo/terminal"
 )
@@ -43,11 +43,11 @@ type demo struct {
 	frameCount    int
 	fps           int
 	lastFPSUpdate time.Time
-	frame         core.Frame
-	cells         []core.Cell
-	cellVariants  []core.Cell
-	headerGlyphs  [128]core.Cell
-	headerCells   []core.Cell
+	frame         canvas.Frame
+	cells         []canvas.Cell
+	cellVariants  []canvas.Cell
+	headerGlyphs  [128]canvas.Cell
+	headerCells   []canvas.Cell
 	rng           *rand.Rand
 }
 
@@ -116,7 +116,7 @@ func newDemo(session terminal.Session) (*demo, error) {
 		return nil, err
 	}
 
-	blank, err := core.NewCellWithWidth(" ", 1, color.FgWhite, color.BgBlack)
+	blank, err := canvas.NewCellWithWidth(" ", 1, color.FgWhite, color.BgBlack)
 	if err != nil {
 		return nil, err
 	}
@@ -148,28 +148,28 @@ func newDemo(session terminal.Session) (*demo, error) {
 	return demo, nil
 }
 
-func newFrame(width, height int, blank core.Cell) (core.Frame, []core.Cell, error) {
+func newFrame(width, height int, blank canvas.Cell) (canvas.Frame, []canvas.Cell, error) {
 	cells := newCells(width*height, blank)
-	frame, err := core.NewFrame(width, height, cells)
+	frame, err := canvas.NewFrame(width, height, cells)
 	if err != nil {
-		return core.Frame{}, nil, err
+		return canvas.Frame{}, nil, err
 	}
 	return frame, cells, nil
 }
 
-func newCells(size int, blank core.Cell) []core.Cell {
-	cells := make([]core.Cell, size)
+func newCells(size int, blank canvas.Cell) []canvas.Cell {
+	cells := make([]canvas.Cell, size)
 	for idx := range cells {
 		cells[idx] = blank
 	}
 	return cells
 }
 
-func newCellVariants(bg color.Color) ([]core.Cell, error) {
-	variants := make([]core.Cell, 0, len(fgPalette)*(asciiMax-asciiMin+1))
+func newCellVariants(bg color.Color) ([]canvas.Cell, error) {
+	variants := make([]canvas.Cell, 0, len(fgPalette)*(asciiMax-asciiMin+1))
 	for _, fg := range fgPalette {
 		for r := asciiMin; r <= asciiMax; r++ {
-			cell, err := core.NewCellWithWidth(string(rune(r)), 1, fg, bg)
+			cell, err := canvas.NewCellWithWidth(string(rune(r)), 1, fg, bg)
 			if err != nil {
 				return nil, err
 			}
@@ -179,12 +179,12 @@ func newCellVariants(bg color.Color) ([]core.Cell, error) {
 	return variants, nil
 }
 
-func newHeaderGlyphs(fg, bg color.Color) ([128]core.Cell, error) {
-	var glyphs [128]core.Cell
+func newHeaderGlyphs(fg, bg color.Color) ([128]canvas.Cell, error) {
+	var glyphs [128]canvas.Cell
 	for ch := byte(32); ch <= 126; ch++ {
-		cell, err := core.NewCellWithWidth(string(rune(ch)), 1, fg, bg)
+		cell, err := canvas.NewCellWithWidth(string(rune(ch)), 1, fg, bg)
 		if err != nil {
-			return [128]core.Cell{}, err
+			return [128]canvas.Cell{}, err
 		}
 		glyphs[ch] = cell
 	}
@@ -227,7 +227,7 @@ func (d *demo) updateFPS() bool {
 func (d *demo) updateHeader() {
 	headerText := "q/esc to quit | FPS: " + fpsLabel(d.fps)
 	if cap(d.headerCells) < len(headerText) {
-		d.headerCells = make([]core.Cell, 0, len(headerText))
+		d.headerCells = make([]canvas.Cell, 0, len(headerText))
 	}
 	d.headerCells = d.headerCells[:0]
 	for idx := range len(headerText) {

@@ -7,8 +7,8 @@ import (
 	"testing"
 
 	vaxis "git.sr.ht/~rockorager/vaxis"
+	"github.com/NLipatov/tuigo/canvas"
 	"github.com/NLipatov/tuigo/color"
-	"github.com/NLipatov/tuigo/core"
 	"github.com/NLipatov/tuigo/terminal/render"
 	"github.com/gdamore/tcell/v2"
 )
@@ -112,7 +112,7 @@ func benchmarkWorkloads() []workload {
 func benchmarkTuigoRenderer(b *testing.B, workload workload) {
 	baseCell := tuigoCell(b, workload.baseSymbol, false)
 	changedCell := tuigoCell(b, workload.changedSymbol, workload.styleChange)
-	cells := make([]core.Cell, workload.width*workload.height)
+	cells := make([]canvas.Cell, workload.width*workload.height)
 	fillTuigoCells(cells, baseCell)
 
 	frame := tuigoFrame(b, workload.width, workload.height, cells)
@@ -268,13 +268,13 @@ func randomPositions(width, height, count int) []position {
 	return positions
 }
 
-func fillTuigoCells(cells []core.Cell, cell core.Cell) {
+func fillTuigoCells(cells []canvas.Cell, cell canvas.Cell) {
 	for i := range cells {
 		cells[i] = cell
 	}
 }
 
-func applyTuigoCells(cells []core.Cell, positions []position, cell core.Cell) {
+func applyTuigoCells(cells []canvas.Cell, positions []position, cell canvas.Cell) {
 	for _, pos := range positions {
 		cells[pos.idx] = cell
 	}
@@ -331,26 +331,26 @@ func contiguousRowRun(positions []position) (int, int, bool) {
 	return start, y, true
 }
 
-func tuigoFrame(b *testing.B, width, height int, cells []core.Cell) core.Frame {
+func tuigoFrame(b *testing.B, width, height int, cells []canvas.Cell) canvas.Frame {
 	b.Helper()
 
-	frame, err := core.NewFrame(width, height, cells)
+	frame, err := canvas.NewFrame(width, height, cells)
 	if err != nil {
-		b.Fatalf("core.NewFrame() error = %v", err)
+		b.Fatalf("canvas.NewFrame() error = %v", err)
 	}
 	return frame
 }
 
-func tuigoCell(b *testing.B, symbol rune, changedStyle bool) core.Cell {
+func tuigoCell(b *testing.B, symbol rune, changedStyle bool) canvas.Cell {
 	b.Helper()
 
 	fg := color.FgRed
 	if changedStyle {
 		fg = color.FgGreen
 	}
-	cell, err := core.NewCell(string(symbol), fg, color.BgBlack)
+	cell, err := canvas.NewCell(string(symbol), fg, color.BgBlack)
 	if err != nil {
-		b.Fatalf("core.NewCell(%q) error = %v", string(symbol), err)
+		b.Fatalf("canvas.NewCell(%q) error = %v", string(symbol), err)
 	}
 	return cell
 }
