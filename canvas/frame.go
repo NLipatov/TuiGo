@@ -48,7 +48,7 @@ func (frame Frame) validateCellLayout() error {
 		if err != nil {
 			return err
 		}
-		for x := 0; x < frame.width; {
+		for x := 0; x < frame.width; x += row[x].Width() {
 			cell := row[x]
 			if cell.Width() == 0 {
 				return FrameCellLayoutError{
@@ -75,7 +75,6 @@ func (frame Frame) validateCellLayout() error {
 				}
 				head++
 			}
-			x += cell.Width()
 		}
 	}
 	return nil

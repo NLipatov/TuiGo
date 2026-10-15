@@ -10,9 +10,9 @@ import (
 )
 
 var (
-	ErrInvalidDivDimensions = errors.New("invalid div dimensions")
-	ErrEmptyText            = errors.New("text element should have non-empty content")
-	ErrDivAreaOverflow      = errors.New("given div width and height multiplication results in overflow")
+	ErrInvalidDimensions = errors.New("invalid dimensions")
+	ErrEmptyText         = errors.New("text element should have non-empty content")
+	ErrAreaOverflow      = errors.New("given width and height multiplication results in overflow")
 )
 
 type Node interface {
@@ -26,6 +26,85 @@ const (
 	Column
 )
 
+type Stack struct {
+	Width, Height int
+	Children      []Node
+}
+
+func (s *Stack) Frame() (canvas.Frame, error) {
+	if err := validateDimensions(s.Width, s.Height); err != nil {
+		return canvas.Frame{}, err
+	}
+	cells := make([]canvas.Cell, s.Width*s.Height)
+	for _, child := range s.Children {
+		frame, err := child.Frame()
+		if err != nil {
+			return canvas.Frame{}, err
+		}
+		for y := range frame.Height() {
+			if y >= s.Height {
+				break
+			}
+			frameRow, err := frame.RowAt(y)
+			if err != nil {
+				return canvas.Frame{}, err
+			}
+			cellsRow := cells[y*s.Width : (y+1)*s.Width]
+			if err := overlayRow(cellsRow, frameRow); err != nil {
+				return canvas.Frame{}, err
+			}
+		}
+	}
+	return canvas.NewFrame(s.Width, s.Height, cells)
+}
+
+func overlayRow(dst, src []canvas.Cell) error {
+	for start := 0; start < len(src); start += src[start].Width() {
+		if start >= len(dst) {
+			break
+		}
+		cell := src[start]
+		if cell.Foreground() == color.FgTransparent ||
+			cell.Background() == color.BgTransparent {
+			continue
+		}
+		end := start + cell.Width()
+		if end > len(dst) {
+			break
+		}
+		if start > 0 && dst[start].Width() == 0 {
+			if err := clearGlyphCrossingBoundary(dst, start); err != nil {
+				return err
+			}
+		}
+		if end < len(dst) && dst[end].Width() == 0 {
+			if err := clearGlyphCrossingBoundary(dst, end); err != nil {
+				return err
+			}
+		}
+		copy(dst[start:end], src[start:end])
+	}
+	return nil
+}
+
+func clearGlyphCrossingBoundary(dst []canvas.Cell, boundary int) error {
+	head := boundary
+	for head > 0 && dst[head].Width() == 0 {
+		head--
+	}
+	tail := head + dst[head].Width()
+	if tail > boundary {
+		blank, err := canvas.NewCell(" ", dst[head].Foreground(), dst[head].Background())
+		if err != nil {
+			return err
+		}
+		for ; head < tail; head++ {
+			dst[head] = blank
+		}
+	}
+	return nil
+}
+
 type Div struct {
 	Width, Height int
 	Fg, Bg        color.Color
@@ -34,11 +113,8 @@ type Div struct {
 }
 
 func (d *Div) Frame() (canvas.Frame, error) {
-	if d.Width <= 0 || d.Height <= 0 {
-		return canvas.Frame{}, ErrInvalidDivDimensions
-	}
-	if d.Width > math.MaxInt/d.Height {
-		return canvas.Frame{}, ErrDivAreaOverflow
+	if err := validateDimensions(d.Width, d.Height); err != nil {
+		return canvas.Frame{}, err
 	}
 	cells := make([]canvas.Cell, d.Width*d.Height)
 	for i := range cells {
@@ -153,4 +229,14 @@ func (t *Text) Frame() (canvas.Frame, error) {
 		}
 	}
 	return canvas.NewFrame(len(cells), 1, cells)
+}
+
+func validateDimensions(w, h int) error {
+	if w <= 0 || h <= 0 {
+		return ErrInvalidDimensions
+	}
+	if w > math.MaxInt/h {
+		return ErrAreaOverflow
+	}
+	return nil
 }
