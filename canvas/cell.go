@@ -2,6 +2,7 @@ package canvas
 
 import (
 	"errors"
+	"math"
 
 	"github.com/NLipatov/tuigo/color"
 	"github.com/rivo/uniseg"
@@ -10,7 +11,7 @@ import (
 var (
 	ErrEmptyCellGlyph           = errors.New("cell glyph should not be empty")
 	ErrMultipleGraphemeClusters = errors.New("cell glyph should contain exactly one grapheme cluster")
-	ErrUnsupportedCellWidth     = errors.New("cell glyph width should be one or two columns")
+	ErrInvalidGlyphWidth        = errors.New("glyph width must be 1..255")
 )
 
 type Cell struct {
@@ -27,8 +28,8 @@ func NewCell(glyph string, fg, bg color.Color) (Cell, error) {
 	if rest != "" {
 		return Cell{}, ErrMultipleGraphemeClusters
 	}
-	if width != 1 && width != 2 {
-		return Cell{}, ErrUnsupportedCellWidth
+	if width > math.MaxUint8 {
+		return Cell{}, ErrInvalidGlyphWidth
 	}
 	return NewCellWithWidth(cluster, width, fg, bg)
 }
@@ -41,8 +42,8 @@ func NewCellWithWidth(glyph string, width int, fg, bg color.Color) (Cell, error)
 	if glyph == "" {
 		return Cell{}, ErrEmptyCellGlyph
 	}
-	if width != 1 && width != 2 {
-		return Cell{}, ErrUnsupportedCellWidth
+	if width > math.MaxUint8 || width <= 0 {
+		return Cell{}, ErrInvalidGlyphWidth
 	}
 	return Cell{
 		glyph: glyph,
