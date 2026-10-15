@@ -48,33 +48,34 @@ func (frame Frame) validateCellLayout() error {
 		if err != nil {
 			return err
 		}
-		for x := 0; x < frame.width; x++ {
+		for x := 0; x < frame.width; {
 			cell := row[x]
-			switch cell.Width() {
-			case 0:
+			if cell.Width() == 0 {
 				return FrameCellLayoutError{
 					X:      x,
 					Y:      y,
 					Reason: "unexpected continuation block",
 				}
-			case 2:
-				if x+1 == frame.width {
-					return FrameCellLayoutError{
-						X:      x,
-						Y:      y,
-						Reason: "missing continuation block",
-					}
-				}
-				continuation := row[x+1]
-				if continuation.Width() != 0 {
-					return FrameCellLayoutError{
-						X:      x,
-						Y:      y,
-						Reason: "missing continuation block",
-					}
-				}
-				x += cell.Width() - 1
 			}
+			head, end := x+1, x+cell.Width()
+			if end > frame.width {
+				return FrameCellLayoutError{
+					X:      x,
+					Y:      y,
+					Reason: "could not fit grapheme on frame: too narrow frame",
+				}
+			}
+			for head < end {
+				if row[head].Width() != 0 {
+					return FrameCellLayoutError{
+						X:      x,
+						Y:      y,
+						Reason: "missing continuation block",
+					}
+				}
+				head++
+			}
+			x += cell.Width()
 		}
 	}
 	return nil
