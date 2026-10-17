@@ -125,9 +125,20 @@ func TestNewFrameAcceptsWideCellWithContinuation(t *testing.T) {
 	}
 }
 
+func TestNewFrameAcceptsCellWithTwoContinuationsAtRowEnd(t *testing.T) {
+	// Frame validates the supplied cell width independently of terminal width calculation.
+	wide := Cell{glyph: "x", width: 3}
+	cells := []Cell{testCellWithGlyph(t, 'A'), wide, {}, {}}
+
+	if _, err := NewFrame(4, 1, cells); err != nil {
+		t.Fatalf("NewFrame() error = %v", err)
+	}
+}
+
 func TestNewFrameRejectsInvalidCellLayout(t *testing.T) {
 	blank := testCellWithGlyph(t, ' ')
 	wide := testCellWithGlyph(t, '🙂')
+	wide3 := Cell{glyph: "x", width: 3}
 
 	tests := []struct {
 		name       string
@@ -155,12 +166,26 @@ func TestNewFrameRejectsInvalidCellLayout(t *testing.T) {
 			width:      3,
 			cells:      []Cell{blank, blank, wide},
 			wantX:      2,
-			wantReason: "missing continuation block",
+			wantReason: "could not fit grapheme on frame: too narrow frame",
 		},
 		{
 			name:       "wide cell followed by normal cell",
 			width:      3,
 			cells:      []Cell{blank, wide, blank},
+			wantX:      1,
+			wantReason: "missing continuation block",
+		},
+		{
+			name:       "three-column cell at row end",
+			width:      3,
+			cells:      []Cell{blank, blank, wide3},
+			wantX:      2,
+			wantReason: "could not fit grapheme on frame: too narrow frame",
+		},
+		{
+			name:       "three-column cell missing second continuation",
+			width:      4,
+			cells:      []Cell{blank, wide3, {}, blank},
 			wantX:      1,
 			wantReason: "missing continuation block",
 		},
