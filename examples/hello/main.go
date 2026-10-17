@@ -4,22 +4,19 @@ import (
 	"context"
 	"os"
 
-	"github.com/NLipatov/tuigo/canvas"
 	"github.com/NLipatov/tuigo/color"
+	"github.com/NLipatov/tuigo/compose"
 	"github.com/NLipatov/tuigo/keyboard"
 	"github.com/NLipatov/tuigo/terminal"
-	"github.com/rivo/uniseg"
 )
 
 func main() {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-
 	session, err := terminal.NewSession(ctx, os.Stdin, os.Stdout)
 	if err != nil {
 		panic(err)
 	}
-
 	events, err := session.Start()
 	if err != nil {
 		panic(err)
@@ -29,15 +26,9 @@ func main() {
 			panic(err)
 		}
 	}()
-
-	width, height, err := session.Size()
-	if err != nil {
+	if err := render(&session); err != nil {
 		panic(err)
 	}
-	if err := renderHello(&session, width, height); err != nil {
-		panic(err)
-	}
-
 	for event := range events {
 		switch event.Type {
 		case terminal.EventKey:
@@ -46,9 +37,7 @@ func main() {
 				return
 			}
 		case terminal.EventResize:
-			width = event.Resize.Width
-			height = event.Resize.Height
-			if err := renderHello(&session, width, height); err != nil {
+			if err := render(&session); err != nil {
 				panic(err)
 			}
 		case terminal.EventError:
@@ -70,118 +59,92 @@ func quitRequested(event keyboard.KeyEvent) bool {
 	return event.Text == "c" && event.Mod&keyboard.ModCtrl != 0
 }
 
-func renderHello(session *terminal.Session, width, height int) error {
-	frame, err := helloFrame(width, height)
+func render(session *terminal.Session) error {
+	w, h, err := session.Size()
+	if err != nil {
+		return err
+	}
+	message := "Hello World!"
+	exitTip := "Exit: q | Ctrl + C | Esc"
+	root := compose.Div{
+		Width:  w,
+		Height: h,
+		Fg:     color.FgWhite,
+		Bg:     color.BgBlack,
+		Children: []compose.Node{
+			&compose.Div{
+				Width:  w,
+				Height: max(h-1, 1),
+				Fg:     color.FgWhite,
+				Bg:     color.BgBlack,
+				Children: []compose.Node{
+					&compose.Div{
+						Width:     w,
+						Height:    max((h/2)-1, 1),
+						Fg:        color.FgWhite,
+						Bg:        color.BgBlack,
+						Children:  []compose.Node{},
+						Direction: compose.Column,
+					},
+					&compose.Div{
+						Width:  w,
+						Height: 1,
+						Fg:     color.FgWhite,
+						Bg:     color.BgBlack,
+						Children: []compose.Node{
+							&compose.Div{
+								Width:     max((w/2)-(len(message)/2), 1),
+								Height:    1,
+								Fg:        color.FgWhite,
+								Bg:        color.BgBlack,
+								Children:  []compose.Node{},
+								Direction: compose.Row,
+							},
+							&compose.Text{
+								Content: message,
+								Fg:      color.FgGreen,
+								Bg:      color.BgBlack,
+							},
+						},
+						Direction: compose.Row,
+					},
+					&compose.Div{
+						Width:  w,
+						Height: max(h/16, 1),
+						Fg:     color.FgWhite,
+						Bg:     color.BgBlack,
+					},
+					&compose.Div{
+						Width:  w,
+						Height: 1,
+						Fg:     color.FgWhite,
+						Bg:     color.BgBlack,
+						Children: []compose.Node{
+							&compose.Div{
+								Width:     max((w/2)-(len(exitTip)/2), 1),
+								Height:    1,
+								Fg:        color.FgWhite,
+								Bg:        color.BgBlack,
+								Children:  []compose.Node{},
+								Direction: compose.Row,
+							},
+							&compose.Text{
+								Content: exitTip,
+								Fg:      color.FgWhite,
+								Bg:      color.BgBlack,
+							},
+						},
+						Direction: compose.Row,
+					},
+				},
+				Direction: compose.Column,
+			},
+		},
+		Direction: compose.Column,
+	}
+	frame, err := root.Frame()
 	if err != nil {
 		return err
 	}
 	return session.Render(frame)
-}
-
-var helloLogo = []string{
-	"##  ## ###### ##     ##      ####",
-	"##  ## ##     ##     ##     ##  ##",
-	"##  ## ##     ##     ##     ##  ##",
-	"###### #####  ##     ##     ##  ##",
-	"##  ## ##     ##     ##     ##  ##",
-	"##  ## ##     ##     ##     ##  ##",
-	"##  ## ###### ###### ######  ####",
-}
-
-const helloTitle = "tuigo"
-
-func helloFrame(width, height int) (canvas.Frame, error) {
-	colors := newPalette()
-	cells := make([]canvas.Cell, width*height)
-	for i := range cells {
-		cells[i] = colors.blank
-	}
-
-	logoX := max(0, (width-logoWidth())/2)
-	logoY := max(3, (height-logoHeight())/2-1)
-	drawLogo(cells, width, height, logoX+1, logoY+1, colors.shadow)
-	drawLogo(cells, width, height, logoX, logoY, colors.logo)
-	drawText(cells, width, height, centeredX(width, helloTitle), logoY+logoHeight()+2, helloTitle, colors.title, colors.bg)
-	drawText(cells, width, height, centeredX(width, "Press q, Esc, or Ctrl+C to quit"), height-2, "Press q, Esc, or Ctrl+C to quit", colors.hint, colors.bg)
-
-	return canvas.NewFrame(width, height, cells)
-}
-
-type palette struct {
-	blank  canvas.Cell
-	logo   canvas.Cell
-	shadow canvas.Cell
-	title  color.Color
-	hint   color.Color
-	bg     color.Color
-}
-
-func newPalette() palette {
-	bg := color.BgBlack
-	return palette{
-		blank:  mustCell(" ", color.FgWhite, bg),
-		logo:   mustCell("=", color.FgBoldGreen, bg),
-		shadow: mustCell(".", color.FgHighIntensityBlack, bg),
-		title:  color.FgGreen,
-		hint:   color.FgHighIntensityBlack,
-		bg:     bg,
-	}
-}
-
-func drawLogo(cells []canvas.Cell, width, height, left, top int, cell canvas.Cell) {
-	for y, row := range helloLogo {
-		for x, pixel := range row {
-			if pixel != ' ' {
-				putCell(cells, width, height, left+x, top+y, cell)
-			}
-		}
-	}
-}
-
-func drawText(cells []canvas.Cell, width, height, left, y int, text string, fg, bg color.Color) {
-	x := left
-	for text != "" {
-		glyph, rest, _, _ := uniseg.FirstGraphemeClusterInString(text, -1)
-		cell := mustCell(glyph, fg, bg)
-		if x < 0 || x+cell.Width() > width {
-			return
-		}
-		putCell(cells, width, height, x, y, cell)
-		if cell.Width() == 2 {
-			putCell(cells, width, height, x+1, y, canvas.Cell{})
-		}
-		x += cell.Width()
-		text = rest
-	}
-}
-
-func putCell(cells []canvas.Cell, width, height, x, y int, cell canvas.Cell) {
-	if x < 0 || y < 0 || x >= width || y >= height {
-		return
-	}
-	cells[y*width+x] = cell
-}
-
-func centeredX(width int, text string) int {
-	return max(0, (width-len(text))/2)
-}
-
-func logoWidth() int {
-	width := 0
-	for _, row := range helloLogo {
-		width = max(width, len(row))
-	}
-	return width
-}
-
-func logoHeight() int {
-	return len(helloLogo)
-}
-
-func mustCell(text string, fg, bg color.Color) canvas.Cell {
-	cell, err := canvas.NewCell(text, fg, bg)
-	if err != nil {
-		panic(err)
-	}
-	return cell
 }
