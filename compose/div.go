@@ -76,7 +76,7 @@ func (d *Div) renderRow(cells []canvas.Cell) error {
 			return err
 		}
 		for y := range frame.Height() {
-			if y+d.Padding.Up >= d.Height {
+			if y+d.Padding.Up >= d.Height-d.Padding.Down {
 				break
 			}
 			row, err := frame.RowAt(y)
@@ -84,7 +84,7 @@ func (d *Div) renderRow(cells []canvas.Cell) error {
 				return err
 			}
 			for x, cell := range row {
-				if x+offsetX+cell.Width() > d.Width {
+				if x+offsetX+cell.Width() > d.Width-d.Padding.Right {
 					break
 				}
 				idx := (y+d.Padding.Up)*d.Width + (x + offsetX)
@@ -107,7 +107,7 @@ func (d *Div) renderColumn(cells []canvas.Cell) error {
 			return err
 		}
 		for y := range frame.Height() {
-			if y+offsetY >= d.Height {
+			if y+offsetY >= d.Height-d.Padding.Down {
 				break
 			}
 			row, err := frame.RowAt(y)
@@ -115,7 +115,7 @@ func (d *Div) renderColumn(cells []canvas.Cell) error {
 				return err
 			}
 			for x, cell := range row {
-				if x+d.Padding.Left+cell.Width() > d.Width {
+				if x+d.Padding.Left+cell.Width() > d.Width-d.Padding.Right {
 					break
 				}
 				idx := (y+offsetY)*d.Width + x + d.Padding.Left
