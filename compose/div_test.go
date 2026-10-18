@@ -85,6 +85,133 @@ func TestDivClipsWideChildAtRightEdge(t *testing.T) {
 	}
 }
 
+func TestDivPadding(t *testing.T) {
+	blank := divTestCell(t, " ", color.FgWhite, color.BgBlue)
+	childBlank := divTestCell(t, " ", color.FgGreen, color.BgPurple)
+	letter := divTestCell(t, "A", color.FgRed, color.BgYellow)
+	tests := []struct {
+		name      string
+		direction Direction
+		children  []Node
+		want      [][]canvas.Cell
+	}{
+		{
+			name:      "row",
+			direction: Row,
+			children: []Node{
+				&Div{Width: 2, Height: 3, Fg: color.FgGreen, Bg: color.BgPurple},
+				&Text{Content: "AB", Fg: color.FgRed, Bg: color.BgYellow},
+			},
+			want: [][]canvas.Cell{
+				{blank, blank, blank, blank, blank},
+				{blank, childBlank, childBlank, letter, blank},
+				{blank, childBlank, childBlank, blank, blank},
+				{blank, blank, blank, blank, blank},
+			},
+		},
+		{
+			name:      "column",
+			direction: Column,
+			children: []Node{
+				&Div{Width: 4, Height: 3, Fg: color.FgGreen, Bg: color.BgPurple},
+				&Text{Content: "AB", Fg: color.FgRed, Bg: color.BgYellow},
+			},
+			want: [][]canvas.Cell{
+				{blank, blank, blank, blank, blank},
+				{blank, childBlank, childBlank, childBlank, blank},
+				{blank, childBlank, childBlank, childBlank, blank},
+				{blank, blank, blank, blank, blank},
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			div := &Div{
+				Width: 5, Height: 4,
+				Padding: Padding{Up: 1, Down: 1, Left: 1, Right: 1},
+				Fg:      color.FgWhite, Bg: color.BgBlue,
+				Direction: tt.direction, Children: tt.children,
+			}
+			assertDivFrame(t, div, tt.want)
+		})
+	}
+}
+
+func TestDivPaddingClipsWideGrapheme(t *testing.T) {
+	blank := divTestCell(t, " ", color.FgWhite, color.BgBlue)
+	letter := divTestCell(t, "A", color.FgRed, color.BgYellow)
+	wide := divTestCell(t, "🙂", color.FgRed, color.BgYellow)
+	for _, direction := range []Direction{Row, Column} {
+		for _, tt := range []struct {
+			name  string
+			width int
+			want  []canvas.Cell
+		}{
+			{name: "fits", width: 5, want: []canvas.Cell{blank, letter, wide, {}, blank}},
+			{name: "clipped", width: 4, want: []canvas.Cell{blank, letter, blank, blank}},
+		} {
+			name := tt.name
+			if direction == Row {
+				name = "row/" + name
+			} else {
+				name = "column/" + name
+			}
+			t.Run(name, func(t *testing.T) {
+				div := &Div{
+					Width: tt.width, Height: 1,
+					Padding: Padding{Left: 1, Right: 1},
+					Fg:      color.FgWhite, Bg: color.BgBlue,
+					Direction: direction,
+					Children:  []Node{&Text{Content: "A🙂", Fg: color.FgRed, Bg: color.BgYellow}},
+				}
+				assertDivFrame(t, div, [][]canvas.Cell{tt.want})
+			})
+		}
+	}
+}
+
+func TestDivPaddingCanLeaveNoContentArea(t *testing.T) {
+	blank := divTestCell(t, " ", color.FgWhite, color.BgBlue)
+	for _, tt := range []struct {
+		name    string
+		padding Padding
+	}{
+		{name: "horizontal", padding: Padding{Left: 1, Right: 1}},
+		{name: "vertical", padding: Padding{Up: 1, Down: 1}},
+	} {
+		for _, dir := range []struct {
+			name      string
+			direction Direction
+		}{
+			{name: "row", direction: Row},
+			{name: "column", direction: Column},
+		} {
+			t.Run(tt.name+"/"+dir.name, func(t *testing.T) {
+				div := &Div{
+					Width: 2, Height: 2,
+					Padding: tt.padding,
+					Fg:      color.FgWhite, Bg: color.BgBlue,
+					Direction: dir.direction,
+					Children:  []Node{&Text{Content: "A", Fg: color.FgRed, Bg: color.BgYellow}},
+				}
+				assertDivFrame(t, div, [][]canvas.Cell{{blank, blank}, {blank, blank}})
+			})
+		}
+	}
+}
+
+func TestDivRejectsNegativePadding(t *testing.T) {
+	for _, padding := range []Padding{
+		{Up: -1}, {Down: -1}, {Left: -1}, {Right: -1},
+	} {
+		_, err := (&Div{Width: 1, Height: 1, Padding: padding}).Frame()
+		if !errors.Is(err, ErrNegativePadding) {
+			t.Errorf("Frame() with padding %+v error = %v, want %v", padding, err, ErrNegativePadding)
+		}
+	}
+}
+
 func TestDivRejectsInvalidDimensions(t *testing.T) {
 	for _, tt := range []struct {
 		name          string
