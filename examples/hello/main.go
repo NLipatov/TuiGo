@@ -65,7 +65,7 @@ func render(session *terminal.Session) error {
 		return err
 	}
 	message := "Hello World!"
-	exitTip := "Exit: q | Ctrl + C | Esc"
+	tip := "Exit: q | Ctrl + C | Esc"
 	root := compose.Div{
 		Width:  w,
 		Height: h,
@@ -74,48 +74,39 @@ func render(session *terminal.Session) error {
 		Children: []compose.Node{
 			&compose.Div{
 				Width:  w,
-				Height: max(h-1, 1),
+				Height: max((h/2)-1, 1) + 1,
 				Fg:     color.FgWhite,
 				Bg:     color.BgBlack,
+				Padding: compose.Padding{
+					Up:   max((h/2)-1, 1),
+					Left: max((w/2)-(len(message)/2), 1),
+				},
 				Children: []compose.Node{
-					&compose.Div{
-						Width:  w,
-						Height: max((h/2)-1, 1) + 1,
-						Fg:     color.FgWhite,
-						Bg:     color.BgBlack,
-						Padding: compose.Padding{
-							Up:   max((h/2)-1, 1),
-							Left: max((w/2)-(len(message)/2), 1),
-						},
-						Children: []compose.Node{
-							&compose.Text{
-								Content: message,
-								Fg:      color.FgGreen,
-								Bg:      color.BgBlack,
-							},
-						},
-						Direction: compose.Row,
-					},
-					&compose.Div{
-						Width:  w,
-						Height: max(h/16, 1) + 1,
-						Fg:     color.FgWhite,
-						Bg:     color.BgBlack,
-						Padding: compose.Padding{
-							Up:   max(h/16, 1),
-							Left: max((w/2)-(len(exitTip)/2), 1),
-						},
-						Children: []compose.Node{
-							&compose.Text{
-								Content: exitTip,
-								Fg:      color.FgWhite,
-								Bg:      color.BgBlack,
-							},
-						},
-						Direction: compose.Row,
+					&compose.Text{
+						Content: message,
+						Fg:      color.FgGreen,
+						Bg:      color.BgBlack,
 					},
 				},
-				Direction: compose.Column,
+				Direction: compose.Row,
+			},
+			&compose.Div{
+				Width:  w,
+				Height: max(h/16, 1) + 1,
+				Fg:     color.FgWhite,
+				Bg:     color.BgBlack,
+				Padding: compose.Padding{
+					Up:   max(h/16, 1),
+					Left: max((w/2)-(len(tip)/2), 1),
+				},
+				Children: []compose.Node{
+					&compose.Text{
+						Content: tip,
+						Fg:      color.FgWhite,
+						Bg:      color.BgBlack,
+					},
+				},
+				Direction: compose.Row,
 			},
 		},
 		Direction: compose.Column,
