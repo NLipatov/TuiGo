@@ -12,8 +12,13 @@ const (
 	Column
 )
 
+type Padding struct {
+	Up, Down, Left, Right int
+}
+
 type Div struct {
 	Width, Height int
+	Padding       Padding
 	Fg, Bg        color.Color
 	Children      []Node
 	Direction     Direction
@@ -47,7 +52,7 @@ func (d *Div) Frame() (canvas.Frame, error) {
 }
 
 func (d *Div) renderRow(cells []canvas.Cell) error {
-	offsetX := 0
+	offsetX := 0 + d.Padding.Left
 	for _, child := range d.Children {
 		frame, err := child.Frame()
 		if err != nil {
@@ -68,7 +73,7 @@ func (d *Div) renderRow(cells []canvas.Cell) error {
 				if x+offsetX+cell.Width() > d.Width {
 					break
 				}
-				idx := y*d.Width + (x + offsetX)
+				idx := (y+d.Padding.Up)*d.Width + (x + offsetX)
 				if idx >= len(cells) {
 					break
 				}
