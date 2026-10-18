@@ -79,27 +79,15 @@ func render(session *terminal.Session) error {
 				Bg:     color.BgBlack,
 				Children: []compose.Node{
 					&compose.Div{
-						Width:     w,
-						Height:    max((h/2)-1, 1),
-						Fg:        color.FgWhite,
-						Bg:        color.BgBlack,
-						Children:  []compose.Node{},
-						Direction: compose.Column,
-					},
-					&compose.Div{
 						Width:  w,
-						Height: 1,
+						Height: max((h/2)-1, 1) + 1,
 						Fg:     color.FgWhite,
 						Bg:     color.BgBlack,
+						Padding: compose.Padding{
+							Up:   max((h/2)-1, 1),
+							Left: max((w/2)-(len(message)/2), 1),
+						},
 						Children: []compose.Node{
-							&compose.Div{
-								Width:     max((w/2)-(len(message)/2), 1),
-								Height:    1,
-								Fg:        color.FgWhite,
-								Bg:        color.BgBlack,
-								Children:  []compose.Node{},
-								Direction: compose.Row,
-							},
 							&compose.Text{
 								Content: message,
 								Fg:      color.FgGreen,
@@ -110,24 +98,14 @@ func render(session *terminal.Session) error {
 					},
 					&compose.Div{
 						Width:  w,
-						Height: max(h/16, 1),
+						Height: max(h/16, 1) + 1,
 						Fg:     color.FgWhite,
 						Bg:     color.BgBlack,
-					},
-					&compose.Div{
-						Width:  w,
-						Height: 1,
-						Fg:     color.FgWhite,
-						Bg:     color.BgBlack,
+						Padding: compose.Padding{
+							Up:   max(h/16, 1),
+							Left: max((w/2)-(len(exitTip)/2), 1),
+						},
 						Children: []compose.Node{
-							&compose.Div{
-								Width:     max((w/2)-(len(exitTip)/2), 1),
-								Height:    1,
-								Fg:        color.FgWhite,
-								Bg:        color.BgBlack,
-								Children:  []compose.Node{},
-								Direction: compose.Row,
-							},
 							&compose.Text{
 								Content: exitTip,
 								Fg:      color.FgWhite,
