@@ -65,7 +65,7 @@ func (d *Div) validatePadding() error {
 		d.Padding.Left < 0 || d.Padding.Right < 0 {
 		return ErrNegativePadding
 	}
-	return nilº
+	return nil
 }
 
 func (d *Div) renderRow(cells []canvas.Cell) error {
