@@ -1,8 +1,14 @@
 package compose
 
 import (
+	"errors"
+
 	"github.com/NLipatov/tuigo/canvas"
 	"github.com/NLipatov/tuigo/color"
+)
+
+var (
+	ErrNegativePadding = errors.New("negative padding")
 )
 
 type Direction int
@@ -28,6 +34,9 @@ func (d *Div) Frame() (canvas.Frame, error) {
 	if err := validateDimensions(d.Width, d.Height); err != nil {
 		return canvas.Frame{}, err
 	}
+	if err := d.validatePadding(); err != nil {
+		return canvas.Frame{}, err
+	}
 	cells := make([]canvas.Cell, d.Width*d.Height)
 	for i := range cells {
 		cell, err := canvas.NewCell(" ", d.Fg, d.Bg)
@@ -51,6 +60,14 @@ func (d *Div) Frame() (canvas.Frame, error) {
 	return canvas.NewFrame(d.Width, d.Height, cells)
 }
 
+func (d *Div) validatePadding() error {
+	if d.Padding.Up < 0 || d.Padding.Down < 0 ||
+		d.Padding.Left < 0 || d.Padding.Right < 0 {
+		return ErrNegativePadding
+	}
+	return nilº
+}
+
 func (d *Div) renderRow(cells []canvas.Cell) error {
 	offsetX := 0 + d.Padding.Left
 	for _, child := range d.Children {
@@ -59,7 +76,7 @@ func (d *Div) renderRow(cells []canvas.Cell) error {
 			return err
 		}
 		for y := range frame.Height() {
-			if y >= d.Height {
+			if y+d.Padding.Up >= d.Height {
 				break
 			}
 			row, err := frame.RowAt(y)
@@ -67,9 +84,6 @@ func (d *Div) renderRow(cells []canvas.Cell) error {
 				return err
 			}
 			for x, cell := range row {
-				if x+offsetX >= d.Width {
-					break
-				}
 				if x+offsetX+cell.Width() > d.Width {
 					break
 				}
@@ -86,7 +100,7 @@ func (d *Div) renderRow(cells []canvas.Cell) error {
 }
 
 func (d *Div) renderColumn(cells []canvas.Cell) error {
-	offsetY := 0
+	offsetY := 0 + d.Padding.Up
 	for _, child := range d.Children {
 		frame, err := child.Frame()
 		if err != nil {
@@ -101,13 +115,10 @@ func (d *Div) renderColumn(cells []canvas.Cell) error {
 				return err
 			}
 			for x, cell := range row {
-				if x >= d.Width {
+				if x+d.Padding.Left+cell.Width() > d.Width {
 					break
 				}
-				if x+cell.Width() > d.Width {
-					break
-				}
-				idx := (y+offsetY)*d.Width + x
+				idx := (y+offsetY)*d.Width + x + d.Padding.Left
 				if idx >= len(cells) {
 					break
 				}
