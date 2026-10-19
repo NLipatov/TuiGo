@@ -15,6 +15,7 @@ var (
 type Text struct {
 	Content string
 	Fg, Bg  color.Color
+	cells   []canvas.Cell
 }
 
 func (t *Text) Frame() (canvas.Frame, error) {
@@ -22,7 +23,10 @@ func (t *Text) Frame() (canvas.Frame, error) {
 		return canvas.Frame{}, ErrEmptyText
 	}
 	gs := uniseg.NewGraphemes(t.Content)
-	cells := make([]canvas.Cell, 0, len(t.Content))
+	cells := t.cells[:0]
+	if cap(cells) < len(t.Content) {
+		cells = make([]canvas.Cell, 0, len(t.Content))
+	}
 	for gs.Next() {
 		cell, err := canvas.NewCellWithWidth(gs.Str(), gs.Width(), t.Fg, t.Bg)
 		if err != nil {
@@ -33,5 +37,6 @@ func (t *Text) Frame() (canvas.Frame, error) {
 			cells = append(cells, canvas.Cell{})
 		}
 	}
+	t.cells = cells
 	return canvas.NewFrame(len(cells), 1, cells)
 }

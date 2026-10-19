@@ -28,6 +28,7 @@ type Div struct {
 	Fg, Bg        color.Color
 	Children      []Node
 	Direction     Direction
+	cells         []canvas.Cell
 }
 
 func (d *Div) Frame() (canvas.Frame, error) {
@@ -37,7 +38,10 @@ func (d *Div) Frame() (canvas.Frame, error) {
 	if err := d.validatePadding(); err != nil {
 		return canvas.Frame{}, err
 	}
-	cells := make([]canvas.Cell, d.Width*d.Height)
+	if len(d.cells) != d.Width*d.Height {
+		d.cells = make([]canvas.Cell, d.Width*d.Height)
+	}
+	cells := d.cells
 	for i := range cells {
 		cell, err := canvas.NewCell(" ", d.Fg, d.Bg)
 		if err != nil {
