@@ -160,6 +160,19 @@ func TestStackSkipsCellWithEitherTransparentColor(t *testing.T) {
 	}
 }
 
+func TestStackClearsCellsBetweenFrames(t *testing.T) {
+	text := &Text{Content: "A", Fg: color.FgWhite, Bg: color.BgBlue}
+	stack := &Stack{Width: 1, Height: 1, Children: []Node{text}}
+	assertStackFrame(t, stack, [][]canvas.Cell{{stackTestCell(t, "A", color.FgWhite, color.BgBlue)}})
+
+	text.Fg = color.FgTransparent
+	_, err := stack.Frame()
+	var layoutErr canvas.FrameCellLayoutError
+	if !errors.As(err, &layoutErr) {
+		t.Fatalf("Frame() after making child transparent: error = %v, want FrameCellLayoutError", err)
+	}
+}
+
 func TestStackRejectsInvalidDimensions(t *testing.T) {
 	tests := []struct {
 		name          string

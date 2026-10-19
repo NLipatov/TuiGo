@@ -8,13 +8,18 @@ import (
 type Stack struct {
 	Width, Height int
 	Children      []Node
+	cells         []canvas.Cell
 }
 
 func (s *Stack) Frame() (canvas.Frame, error) {
 	if err := validateDimensions(s.Width, s.Height); err != nil {
 		return canvas.Frame{}, err
 	}
-	cells := make([]canvas.Cell, s.Width*s.Height)
+	if len(s.cells) != s.Width*s.Height {
+		s.cells = make([]canvas.Cell, s.Width*s.Height)
+	}
+	cells := s.cells
+	clear(cells)
 	for _, child := range s.Children {
 		frame, err := child.Frame()
 		if err != nil {
