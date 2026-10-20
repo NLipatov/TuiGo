@@ -22,6 +22,26 @@ func TestStackOverlaysSmallerText(t *testing.T) {
 	})
 }
 
+func TestStackOverlaysNestedTransparentStack(t *testing.T) {
+	layer := &Div{
+		Width: 2, Height: 1, Fg: color.FgTransparent, Bg: color.BgTransparent,
+		Children: []Node{&Text{Content: "X", Fg: color.FgRed, Bg: color.BgYellow}},
+	}
+	inner := &Stack{Width: 2, Height: 1, Children: []Node{layer}}
+	outer := &Stack{
+		Width: 2, Height: 1,
+		Children: []Node{
+			&Div{Width: 2, Height: 1, Fg: color.FgWhite, Bg: color.BgBlue},
+			inner,
+		},
+	}
+
+	assertStackFrame(t, outer, [][]canvas.Cell{{
+		stackTestCell(t, "X", color.FgRed, color.BgYellow),
+		stackTestCell(t, " ", color.FgWhite, color.BgBlue),
+	}})
+}
+
 func TestStackClipsOversizedChild(t *testing.T) {
 	base := &Div{Width: 2, Height: 1, Fg: color.FgWhite, Bg: color.BgBlue}
 	child := &Div{
@@ -160,17 +180,13 @@ func TestStackSkipsCellWithEitherTransparentColor(t *testing.T) {
 	}
 }
 
-func TestStackClearsCellsBetweenFrames(t *testing.T) {
+func TestStackResetsUncoveredCellsBetweenFrames(t *testing.T) {
 	text := &Text{Content: "A", Fg: color.FgWhite, Bg: color.BgBlue}
 	stack := &Stack{Width: 1, Height: 1, Children: []Node{text}}
 	assertStackFrame(t, stack, [][]canvas.Cell{{stackTestCell(t, "A", color.FgWhite, color.BgBlue)}})
 
 	text.Fg = color.FgTransparent
-	_, err := stack.Frame()
-	var layoutErr canvas.FrameCellLayoutError
-	if !errors.As(err, &layoutErr) {
-		t.Fatalf("Frame() after making child transparent: error = %v, want FrameCellLayoutError", err)
-	}
+	assertStackFrame(t, stack, [][]canvas.Cell{{stackTestCell(t, " ", color.FgTransparent, color.BgTransparent)}})
 }
 
 func TestStackRejectsInvalidDimensions(t *testing.T) {

@@ -19,7 +19,13 @@ func (s *Stack) Frame() (canvas.Frame, error) {
 		s.cells = make([]canvas.Cell, s.Width*s.Height)
 	}
 	cells := s.cells
-	clear(cells)
+	blank, err := canvas.NewCellWithWidth(" ", 1, color.FgTransparent, color.BgTransparent)
+	if err != nil {
+		return canvas.Frame{}, err
+	}
+	for i := range cells {
+		cells[i] = blank
+	}
 	for _, child := range s.Children {
 		frame, err := child.Frame()
 		if err != nil {
