@@ -18,7 +18,6 @@ type counter struct {
 func main() {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-	counter := &counter{}
 	session, err := terminal.NewSession(ctx, os.Stdin, os.Stdout)
 	if err != nil {
 		panic(err)
@@ -32,6 +31,7 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
+	counter := &counter{}
 	render(session, counter)
 	for event := range events {
 		switch event.Type {
@@ -52,7 +52,6 @@ func main() {
 		default:
 			render(session, counter)
 		}
-
 	}
 }
 
