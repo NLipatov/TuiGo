@@ -8,7 +8,8 @@ import (
 )
 
 var (
-	ErrNegativePadding = errors.New("negative padding")
+	ErrNegativePadding      = errors.New("negative padding")
+	ErrUnsupportedDirection = errors.New("unsupported direction")
 )
 
 type Direction int
@@ -35,8 +36,9 @@ func (d *Div) Frame() (canvas.Frame, error) {
 	if err := validateDimensions(d.Width, d.Height); err != nil {
 		return canvas.Frame{}, err
 	}
-	if err := d.validatePadding(); err != nil {
-		return canvas.Frame{}, err
+	if d.Padding.Up < 0 || d.Padding.Down < 0 ||
+		d.Padding.Left < 0 || d.Padding.Right < 0 {
+		return canvas.Frame{}, ErrNegativePadding
 	}
 	if len(d.cells) != d.Width*d.Height {
 		d.cells = make([]canvas.Cell, d.Width*d.Height)
@@ -49,62 +51,14 @@ func (d *Div) Frame() (canvas.Frame, error) {
 		}
 		cells[i] = cell
 	}
-	switch d.Direction {
-	case Row:
-		err := d.renderRow(cells)
-		if err != nil {
-			return canvas.Frame{}, err
-		}
-	case Column:
-		err := d.renderColumn(cells)
-		if err != nil {
-			return canvas.Frame{}, err
-		}
+	if err := d.renderChildren(cells); err != nil {
+		return canvas.Frame{}, err
 	}
 	return canvas.NewFrame(d.Width, d.Height, cells)
 }
 
-func (d *Div) validatePadding() error {
-	if d.Padding.Up < 0 || d.Padding.Down < 0 ||
-		d.Padding.Left < 0 || d.Padding.Right < 0 {
-		return ErrNegativePadding
-	}
-	return nil
-}
-
-func (d *Div) renderRow(cells []canvas.Cell) error {
-	offsetX := 0 + d.Padding.Left
-	for _, child := range d.Children {
-		frame, err := child.Frame()
-		if err != nil {
-			return err
-		}
-		for y := range frame.Height() {
-			if y+d.Padding.Up >= d.Height-d.Padding.Down {
-				break
-			}
-			row, err := frame.RowAt(y)
-			if err != nil {
-				return err
-			}
-			for x, cell := range row {
-				if x+offsetX+cell.Width() > d.Width-d.Padding.Right {
-					break
-				}
-				idx := (y+d.Padding.Up)*d.Width + (x + offsetX)
-				if idx >= len(cells) {
-					break
-				}
-				cells[idx] = cell
-			}
-		}
-		offsetX += frame.Width()
-	}
-	return nil
-}
-
-func (d *Div) renderColumn(cells []canvas.Cell) error {
-	offsetY := 0 + d.Padding.Up
+func (d *Div) renderChildren(cells []canvas.Cell) error {
+	offsetY, offsetX := 0+d.Padding.Up, 0+d.Padding.Left
 	for _, child := range d.Children {
 		frame, err := child.Frame()
 		if err != nil {
@@ -118,8 +72,13 @@ func (d *Div) renderColumn(cells []canvas.Cell) error {
 			if err != nil {
 				return err
 			}
-			for x, cell := range row {
-				if x+d.Padding.Left+cell.Width() > d.Width-d.Padding.Right {
+			for x := 0; x < len(row); x += row[x].Width() {
+				cell := row[x]
+				if cell.Foreground() == color.FgTransparent ||
+					cell.Background() == color.BgTransparent {
+					continue
+				}
+				if x+offsetX+cell.Width() > d.Width-d.Padding.Right {
 					break
 				}
 				idx := (y+offsetY)*d.Width + x + d.Padding.Left
@@ -129,7 +88,14 @@ func (d *Div) renderColumn(cells []canvas.Cell) error {
 				cells[idx] = cell
 			}
 		}
-		offsetY += frame.Height()
+		switch d.Direction {
+		case Row:
+			offsetX += frame.Width()
+		case Column:
+			offsetY += frame.Height()
+		default:
+			return ErrUnsupportedDirection
+		}
 	}
 	return nil
 }
