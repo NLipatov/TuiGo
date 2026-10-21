@@ -31,18 +31,18 @@ go run golang.org/x/perf/cmd/benchstat@v0.0.0-20260610192853-712aea8b4705 result
 - ANSI diff output
 - minimal dependencies: `golang.org/x/term` and `github.com/rivo/uniseg`
 
-## Demo
+## Examples
 
-Rich demo:
+Start with the interactive counter:
 
 ```sh
-go run ./examples/demo
+go run ./examples/counter
 ```
 
-Minimal example:
+For an interactive renderer stress test:
 
 ```sh
-go run ./examples/hello
+go run ./examples/random
 ```
 
 Press `q`, `Esc`, or `Ctrl+C` to quit.

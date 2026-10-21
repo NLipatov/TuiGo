@@ -80,7 +80,7 @@ func TestNewCellRejectsInvalidGlyph(t *testing.T) {
 		{
 			name:  "zero-width cluster",
 			glyph: "\u0301",
-			want:  ErrUnsupportedCellWidth,
+			want:  ErrInvalidGlyphWidth,
 		},
 	}
 
@@ -94,7 +94,7 @@ func TestNewCellRejectsInvalidGlyph(t *testing.T) {
 	}
 }
 
-func TestNewCellWithWidthAcceptsKnownWidth(t *testing.T) {
+func TestNewCellWithWidthAcceptsRepresentableWidth(t *testing.T) {
 	fg, bg := testColors(t)
 
 	tests := []struct {
@@ -103,6 +103,9 @@ func TestNewCellWithWidthAcceptsKnownWidth(t *testing.T) {
 	}{
 		{glyph: "Ж", width: 1},
 		{glyph: "界", width: 2},
+		// NewCellWithWidth trusts the caller's display width; these cases check its storage range.
+		{glyph: "x", width: 3},
+		{glyph: "x", width: 255},
 	}
 
 	for _, tt := range tests {
@@ -144,13 +147,19 @@ func TestNewCellWithWidthRejectsInvalidInput(t *testing.T) {
 			name:  "zero width",
 			glyph: "x",
 			width: 0,
-			want:  ErrUnsupportedCellWidth,
+			want:  ErrInvalidGlyphWidth,
 		},
 		{
-			name:  "unsupported width",
+			name:  "negative width",
 			glyph: "x",
-			width: 3,
-			want:  ErrUnsupportedCellWidth,
+			width: -1,
+			want:  ErrInvalidGlyphWidth,
+		},
+		{
+			name:  "width exceeds uint8",
+			glyph: "x",
+			width: 256,
+			want:  ErrInvalidGlyphWidth,
 		},
 	}
 

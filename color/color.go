@@ -67,4 +67,7 @@ const (
 	BgHighIntensityPurple
 	BgHighIntensityCyan
 	BgHighIntensityWhite
+
+	FgTransparent
+	BgTransparent
 )
