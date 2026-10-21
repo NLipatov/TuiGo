@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.4.1](https://github.com/NLipatov/TuiGo/compare/v0.4.0...v0.4.1) (2026-10-21)
+
+
+### Features
+
+* **compose:** add composition API ([#23](https://github.com/NLipatov/TuiGo/issues/23)) ([5dfa931](https://github.com/NLipatov/TuiGo/commit/5dfa9318f9efe2bf32e39f8e0e076fbe4be5769a))
+
 ## [0.4.0](https://github.com/NLipatov/TuiGo/compare/v0.3.1...v0.4.0) (2026-10-02)
 
 
