@@ -81,11 +81,11 @@ func (d *Div) renderChildren(cells []canvas.Cell) error {
 				if x+offsetX+cell.Width() > d.Width-d.Padding.Right {
 					break
 				}
-				idx := (y+offsetY)*d.Width + x + offsetX
-				if idx >= len(cells) {
-					break
-				}
-				cells[idx] = cell
+				cellsStart := (y+offsetY)*d.Width + x + offsetX
+				cellsEnd := cellsStart + cell.Width()
+				rowStart := x
+				rowEnd := x + cell.Width()
+				copy(cells[cellsStart:cellsEnd], row[rowStart:rowEnd])
 			}
 		}
 		switch d.Direction {
