@@ -81,7 +81,7 @@ func (d *Div) renderChildren(cells []canvas.Cell) error {
 				if x+offsetX+cell.Width() > d.Width-d.Padding.Right {
 					break
 				}
-				idx := (y+offsetY)*d.Width + x + d.Padding.Left
+				idx := (y+offsetY)*d.Width + x + offsetX
 				if idx >= len(cells) {
 					break
 				}
