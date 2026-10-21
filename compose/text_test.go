@@ -46,3 +46,34 @@ func TestTextRejectsEmptyContent(t *testing.T) {
 		t.Fatalf("Frame() error = %v, want %v", err, ErrEmptyText)
 	}
 }
+
+func TestTextFrameReflectsContentChanges(t *testing.T) {
+	text := &Text{Content: "🙂B", Fg: color.FgRed, Bg: color.BgBlue}
+	first, err := text.Frame()
+	if err != nil {
+		t.Fatalf("first Frame() error = %v", err)
+	}
+	if first.Width() != 3 {
+		t.Fatalf("first Frame() width = %d, want 3", first.Width())
+	}
+
+	text.Content = "A"
+	second, err := text.Frame()
+	if err != nil {
+		t.Fatalf("second Frame() error = %v", err)
+	}
+	if second.Width() != 1 || second.Height() != 1 {
+		t.Fatalf("second Frame() size = %dx%d, want 1x1", second.Width(), second.Height())
+	}
+	row, err := second.RowAt(0)
+	if err != nil {
+		t.Fatalf("RowAt(0) error = %v", err)
+	}
+	want, err := canvas.NewCell("A", color.FgRed, color.BgBlue)
+	if err != nil {
+		t.Fatalf("NewCell() error = %v", err)
+	}
+	if row[0] != want {
+		t.Errorf("cell 0 = %#v, want %#v", row[0], want)
+	}
+}

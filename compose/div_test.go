@@ -85,6 +85,52 @@ func TestDivClipsWideChildAtRightEdge(t *testing.T) {
 	}
 }
 
+func TestDivSkipsTransparentWideChild(t *testing.T) {
+	blank := divTestCell(t, " ", color.FgWhite, color.BgBlue)
+	letter := divTestCell(t, "X", color.FgRed, color.BgYellow)
+	for _, tt := range []struct {
+		name      string
+		direction Direction
+		want      [][]canvas.Cell
+	}{
+		{name: "row", direction: Row, want: [][]canvas.Cell{{blank, blank, letter}, {blank, blank, blank}}},
+		{name: "column", direction: Column, want: [][]canvas.Cell{{blank, blank, blank}, {letter, blank, blank}}},
+	} {
+		for _, transparent := range []struct {
+			name   string
+			fg, bg color.Color
+		}{
+			{name: "foreground", fg: color.FgTransparent, bg: color.BgYellow},
+			{name: "background", fg: color.FgRed, bg: color.BgTransparent},
+		} {
+			t.Run(tt.name+"/"+transparent.name, func(t *testing.T) {
+				div := &Div{
+					Width: 3, Height: 2, Fg: color.FgWhite, Bg: color.BgBlue,
+					Direction: tt.direction,
+					Children: []Node{
+						&Text{Content: "🙂", Fg: transparent.fg, Bg: transparent.bg},
+						&Text{Content: "X", Fg: color.FgRed, Bg: color.BgYellow},
+					},
+				}
+				assertDivFrame(t, div, tt.want)
+			})
+		}
+	}
+}
+
+func TestDivRestoresBackgroundBetweenFrames(t *testing.T) {
+	text := &Text{Content: "🙂", Fg: color.FgRed, Bg: color.BgYellow}
+	div := &Div{
+		Width: 2, Height: 1, Fg: color.FgWhite, Bg: color.BgBlue,
+		Children: []Node{text},
+	}
+	assertDivFrame(t, div, [][]canvas.Cell{{divTestCell(t, "🙂", color.FgRed, color.BgYellow), {}}})
+
+	text.Fg = color.FgTransparent
+	blank := divTestCell(t, " ", color.FgWhite, color.BgBlue)
+	assertDivFrame(t, div, [][]canvas.Cell{{blank, blank}})
+}
+
 func TestDivPadding(t *testing.T) {
 	blank := divTestCell(t, " ", color.FgWhite, color.BgBlue)
 	childBlank := divTestCell(t, " ", color.FgGreen, color.BgPurple)

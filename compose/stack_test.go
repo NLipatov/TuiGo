@@ -181,12 +181,13 @@ func TestStackSkipsCellWithEitherTransparentColor(t *testing.T) {
 }
 
 func TestStackResetsUncoveredCellsBetweenFrames(t *testing.T) {
-	text := &Text{Content: "A", Fg: color.FgWhite, Bg: color.BgBlue}
-	stack := &Stack{Width: 1, Height: 1, Children: []Node{text}}
-	assertStackFrame(t, stack, [][]canvas.Cell{{stackTestCell(t, "A", color.FgWhite, color.BgBlue)}})
+	text := &Text{Content: "🙂", Fg: color.FgWhite, Bg: color.BgBlue}
+	stack := &Stack{Width: 2, Height: 1, Children: []Node{text}}
+	assertStackFrame(t, stack, [][]canvas.Cell{{stackTestCell(t, "🙂", color.FgWhite, color.BgBlue), {}}})
 
 	text.Fg = color.FgTransparent
-	assertStackFrame(t, stack, [][]canvas.Cell{{stackTestCell(t, " ", color.FgTransparent, color.BgTransparent)}})
+	blank := stackTestCell(t, " ", color.FgTransparent, color.BgTransparent)
+	assertStackFrame(t, stack, [][]canvas.Cell{{blank, blank}})
 }
 
 func TestStackRejectsInvalidDimensions(t *testing.T) {
